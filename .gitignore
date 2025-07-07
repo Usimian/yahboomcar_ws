@@ -1,0 +1,118 @@
+# ROS2 Build artifacts
+build/
+install/
+log/
+
+# Backup files
+*~
+*.swp
+*.swo
+*#
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# C++
+*.o
+*.a
+*.so
+*.dll
+*.exe
+*.out
+*.app
+
+# ROS specific
+*.bag
+*.db3
+*.mcap
+devel/
+.catkin_workspace
+.rosinstall
+
+# LaTeX
+*.aux
+*.log
+*.toc
+*.out
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Log files
+*.log
+
+# Configuration files that might contain sensitive information
+config/secrets.yaml
+config/private.yaml
+*.pem
+*.key
+
+# Custom build directories
+build_*/
+
+# Large vocabulary files
+src/yahboomcar_slam/params/ORBvoc.txt
+
+# Large model files (too large for GitHub)
+src/yahboomcar_mediapipe/yahboomcar_mediapipe/file/shape_predictor_68_face_landmarks.dat
+src/yahboomcar_visual/detection/frozen_inference_graph.pb
+
+# Other large model files
+*.dat
+*.pb
+*.onnx
+*.pth
+*.h5
+*.hdf5 
