@@ -19,9 +19,6 @@ setup(
     maintainer_email='13377528435@sina.cn',
     description='TODO: Package description',
     license='TODO: License declaration',
-    extras_require={
-        "test": ["pytest"],
-    },
     entry_points={
         'console_scripts': [
         'colorHSV = yahboomcar_astra.colorHSV:main',

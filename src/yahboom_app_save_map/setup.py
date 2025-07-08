@@ -18,9 +18,6 @@ setup(
     maintainer_email='yahboom@todo.todo',
     description='TODO: Package description',
     license='TODO: License declaration',
-    extras_require={
-        "test": ["pytest"],
-    },
     entry_points={
         'console_scripts': [
         "server=yahboom_app_save_map.yahboom_app_save_map:main",

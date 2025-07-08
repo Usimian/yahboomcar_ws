@@ -1,6 +1,8 @@
 from setuptools import setup
+import os
+from glob import glob
 
-package_name = 'laserscan_to_point_pulisher'
+package_name = 'laserscan_to_point_publisher'
 
 setup(
     name=package_name,
@@ -22,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-        "laserscan_to_point_pulisher = laserscan_to_point_pulisher.laserscan_to_point_publish:main"
+            'laserscan_to_point_publisher = laserscan_to_point_publisher.laserscan_to_point_publish:main'
         ],
     },
 )
