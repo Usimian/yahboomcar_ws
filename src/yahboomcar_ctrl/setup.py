@@ -11,7 +11,8 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml']), (os.path.join('share',package_name,'launch'),glob(os.path.join('launch','*launch.py'))),
+        ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.py'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,9 +25,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-        'yahboom_joy_X3	= yahboomcar_ctrl.yahboom_joy_X3:main',
-        'yahboom_keyboard	= yahboomcar_ctrl.yahboom_keyboard:main',
-        'yahboom_joy_R2	= yahboomcar_ctrl.yahboom_joy_R2:main',
+            'yahboom_joy_X3 = yahboomcar_ctrl.yahboom_joy_X3:main',
+            'yahboom_keyboard = yahboomcar_ctrl.yahboom_keyboard:main',
+            'yahboom_joy_R2 = yahboomcar_ctrl.yahboom_joy_R2:main',
         ],
     },
-)
+) 
