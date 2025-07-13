@@ -25,6 +25,12 @@ class JoyTeleop(Node):
 		self.linear_speed = 0.25
 		self.angular_speed = 0.25
 		
+		# Button state tracking for edge detection
+		self.prev_rgb_button_state = False
+		self.prev_linear_button_state = False
+		self.prev_angular_button_state = False
+		self.prev_start_button_state = False
+		
 		# Define joystick control mappings
 		self.setup_control_mappings()
 		
@@ -87,31 +93,43 @@ class JoyTeleop(Node):
 		self.user_jetson(joy_data)
 
 	def user_jetson(self, joy_data):
-		# Drive on/off
-		if self.get_button_state(joy_data, 'start'):
+		# Get current button states
+		current_start_button = self.get_button_state(joy_data, 'start')
+		current_rgb_button = self.get_button_state(joy_data, 'right_button')
+		current_linear_button = self.get_button_state(joy_data, 'left_joystick_button')
+		current_angular_button = self.get_button_state(joy_data, 'right_joystick_button')
+		
+		# Drive on/off - detect button press transition
+		if current_start_button and not self.prev_start_button_state:
 			self.toggle_drive_state()
 			
-		# RGB Light control
-		if self.get_button_state(joy_data, 'right_button'):
+		# RGB Light control - detect button press transition
+		if current_rgb_button and not self.prev_rgb_button_state:
 			RGBLight_ctrl = Int32()
-			if self.RGBLight_index < 6:
-				RGBLight_ctrl.data = self.RGBLight_index
-				for i in range(3): self.pub_RGBLight.publish(RGBLight_ctrl)
-			else: self.RGBLight_index = 0
-			self.RGBLight_index += 1
+			RGBLight_ctrl.data = self.RGBLight_index
+			for i in range(3): self.pub_RGBLight.publish(RGBLight_ctrl)
 			
-		# Linear gear control
-		if self.get_button_state(joy_data, 'left_joystick_button'):
+			# Cycle through 0 to 6 inclusive
+			self.RGBLight_index = (self.RGBLight_index + 1) % 7
+			
+		# Linear gear control - detect button press transition
+		if current_linear_button and not self.prev_linear_button_state:
 			if self.linear_speed == 1.0: self.linear_speed = 1.0 / 3
 			elif self.linear_speed == 1.0 / 3: self.linear_speed = 2.0 / 3
 			elif self.linear_speed == 2.0 / 3: self.linear_speed = 1
 			
-		# Angular gear control
-		if self.get_button_state(joy_data, 'right_joystick_button'):
+		# Angular gear control - detect button press transition
+		if current_angular_button and not self.prev_angular_button_state:
 			if self.angular_speed == 1.0: self.angular_speed = 1.0 / 4
 			elif self.angular_speed == 1.0 / 4: self.angular_speed = 1.0 / 2
 			elif self.angular_speed == 1.0 / 2: self.angular_speed = 3.0 / 4
 			elif self.angular_speed == 3.0 / 4: self.angular_speed = 1.0
+			
+		# Update previous button states for next iteration
+		self.prev_start_button_state = current_start_button
+		self.prev_rgb_button_state = current_rgb_button
+		self.prev_linear_button_state = current_linear_button
+		self.prev_angular_button_state = current_angular_button
 			
 		# Get movement values using named axes
 		xlinear_speed = self.filter_data(self.get_axis_value(joy_data, 'joy_left_y')) * self.xspeed_limit * self.linear_speed

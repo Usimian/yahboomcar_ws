@@ -27,7 +27,6 @@ setup(
         'console_scripts': [
             'yahboom_joy_X3 = yahboomcar_ctrl.yahboom_joy_X3:main',
             'yahboom_keyboard = yahboomcar_ctrl.yahboom_keyboard:main',
-            'yahboom_joy_R2 = yahboomcar_ctrl.yahboom_joy_R2:main',
         ],
     },
 ) 
