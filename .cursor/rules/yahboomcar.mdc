@@ -4,5 +4,4 @@ alwaysApply: true
 
 This is a ROS2 workspace.
 The language is Python or C++
-This is a ROS2 workspace.
-The language is Python or C++
+The ROS2 packages have been sourced.

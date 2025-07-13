@@ -62,7 +62,7 @@ speedBindings = {
 
 
 
-class Yahboom_Keybord(Node):
+class Yahboom_Keyboard(Node):
 	def __init__(self,name):
 		super().__init__(name)
 		self.pub = self.create_publisher(Twist,'cmd_vel',1)
@@ -83,7 +83,7 @@ class Yahboom_Keybord(Node):
 	
 def main():
 	rclpy.init()
-	yahboom_keyboard = Yahboom_Keybord("yahboom_keyboard_ctrl")
+	yahboom_keyboard = Yahboom_Keyboard("yahboom_keyboard_ctrl")
 	xspeed_switch = True
 	(speed, turn) = (0.2, 1.0)
 	(x, th) = (0, 0)
