@@ -1,0 +1,37 @@
+autonomous_navigator:
+  ros__parameters:
+    # Speed limits
+    max_speed: 0.3                    # Maximum linear speed (m/s)
+    max_angular_speed: 0.5           # Maximum angular speed (rad/s)
+    
+    # Safety parameters
+    safety_distance: 0.8             # Minimum distance to obstacles (m)
+    emergency_distance: 0.4          # Emergency stop distance (m)
+    goal_tolerance: 0.2              # Goal reaching tolerance (m)
+    
+    # Control parameters
+    enable_autonomous: true          # Enable autonomous driving
+    control_frequency: 10.0          # Control loop frequency (Hz)
+    mapping_frequency: 5.0           # Mapping update frequency (Hz)
+    localization_frequency: 20.0     # Localization update frequency (Hz)
+    
+    # Mapping parameters
+    map_resolution: 0.05             # Map resolution (m/cell)
+    map_width: 400                   # Map width (cells) - 20m at 0.05m resolution
+    map_height: 400                  # Map height (cells) - 20m at 0.05m resolution
+    map_origin_x: -10.0              # Map origin X (m)
+    map_origin_y: -10.0              # Map origin Y (m)
+    
+    # Obstacle detection
+    obstacle_probability_increment: 0.1    # Probability increase for obstacles
+    free_space_probability_decrement: 0.02 # Probability decrease for free space
+    
+    # Sensor fusion
+    use_imu_orientation: true        # Use IMU for orientation (more accurate)
+    use_odom_position: true          # Use odometry for position
+    pose_history_length: 100         # Number of poses to keep in history
+    
+    # Navigation behavior
+    turn_preference: 0.1             # Preference for turning (0=right, 1=left)
+    exploration_mode: false          # Enable exploration behavior
+    wall_following_distance: 0.5     # Distance to maintain from walls 
