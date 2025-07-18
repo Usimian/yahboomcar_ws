@@ -25,16 +25,10 @@ setup(
     entry_points={
         'console_scripts': [
             'Mcnamu_driver_X3 = yahboomcar_bringup.Mcnamu_driver_X3:main',
-            'Mcnamu_driver_x1 = yahboomcar_bringup.Mcnamu_driver_x1:main',
             'calibrate_linear_X3 = yahboomcar_bringup.calibrate_linear_X3:main', 
             'calibrate_angular_X3 = yahboomcar_bringup.calibrate_angular_X3:main',
             'patrol_4ROS = yahboomcar_bringup.patrol_4ROS:main',
             'patrol_a1_X3 = yahboomcar_bringup.patrol_a1_X3:main',
-            'Ackman_driver_R2 = yahboomcar_bringup.Ackman_driver_R2:main',
-            'calibrate_linear_R2 = yahboomcar_bringup.calibrate_linear_R2:main',
-            'calibrate_angular_R2 = yahboomcar_bringup.calibrate_angular_R2:main',
-            'patrol_4ROS_R2 = yahboomcar_bringup.patrol_4ROS_R2:main',
-            'patrol_a1_R2 = yahboomcar_bringup.patrol_a1_R2:main',   
         ],
     },
 )

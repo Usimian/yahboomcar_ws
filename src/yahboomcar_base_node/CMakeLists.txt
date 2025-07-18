@@ -42,15 +42,9 @@ if(BUILD_TESTING)
 endif()
 
 add_executable(base_node_X3 src/base_node_X3.cpp)
-add_executable(base_node_x1 src/base_node_x1.cpp)
-add_executable(base_node_R2 src/base_node_R2.cpp)
 ament_target_dependencies(base_node_X3 rclcpp tf2 tf2_ros nav_msgs geometry_msgs turtlesim)
-ament_target_dependencies(base_node_x1 rclcpp tf2 tf2_ros nav_msgs geometry_msgs turtlesim)
-ament_target_dependencies(base_node_R2 rclcpp tf2 tf2_ros nav_msgs geometry_msgs turtlesim)
 install(TARGETS
   base_node_X3
-  base_node_x1
-  base_node_R2
 	DESTINATION lib/${PROJECT_NAME}
 )
 ament_package()
