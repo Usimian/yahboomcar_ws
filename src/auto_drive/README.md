@@ -34,21 +34,21 @@ The robot was only driving forward instead of performing intelligent autonomous 
 
 ### Basic Launch (with RViz)
 ```bash
-ros2 launch auto_drive autonomous_drive.launch.py
+ros2 launch auto_drive auto_drive.launch.py
 ```
 
 ### Headless Launch (no graphics)
 ```bash
-ros2 launch auto_drive autonomous_drive_headless.launch.py
+ros2 launch auto_drive auto_drive_headless.launch.py
 ```
 
 ### Manual Control
 ```bash
-# Enable autonomous mode
-ros2 run auto_drive autonomous_control enable
+# Enable auto mode
+ros2 run auto_drive auto_control enable
 
-# Disable autonomous mode (manual control)
-ros2 run auto_drive autonomous_control disable
+# Disable auto mode (manual control)
+ros2 run auto_drive auto_control disable
 
 # Check current status
 ros2 topic echo /JoyState
@@ -101,9 +101,9 @@ The robot now exhibits intelligent autonomous behavior:
 
 ## Configuration
 
-### Parameters (config/autonomous_drive.yaml)
+### Parameters (config/auto_drive.yaml)
 ```yaml
-autonomous_navigator:
+auto_navigator:
   ros__parameters:
     max_speed: 0.3                    # Maximum linear speed (m/s)
     max_angular_speed: 0.5           # Maximum angular speed (rad/s)
@@ -115,10 +115,10 @@ autonomous_navigator:
 ### Launch Parameters
 ```bash
 # Custom speed and safety distance
-ros2 launch auto_drive autonomous_drive.launch.py max_speed:=0.2 safety_distance:=1.0
+ros2 launch auto_drive auto_drive.launch.py max_speed:=0.2 safety_distance:=1.0
 
-# Disable autonomous mode on startup
-ros2 launch auto_drive autonomous_drive.launch.py enable_autonomous:=false
+# Disable auto mode on startup
+ros2 launch auto_drive auto_drive.launch.py enable_auto:=false
 ```
 
 ## Troubleshooting
@@ -128,12 +128,12 @@ ros2 launch auto_drive autonomous_drive.launch.py enable_autonomous:=false
    ```bash
    ros2 topic echo /JoyState
    ```
-   - `data: false` = Autonomous mode
+   - `data: false` = Auto mode
    - `data: true` = Manual mode
 
-2. **Enable autonomous mode**:
+2. **Enable auto mode**:
    ```bash
-   ros2 run auto_drive autonomous_control enable
+   ros2 run auto_drive auto_control enable
    ```
 
 3. **Check sensor data**:
@@ -149,7 +149,7 @@ ros2 launch auto_drive autonomous_drive.launch.py enable_autonomous:=false
    ```
 
 ### Robot Behaving Erratically?
-1. **Adjust safety parameters** in `config/autonomous_drive.yaml`
+1. **Adjust safety parameters** in `config/auto_drive.yaml`
 2. **Check lidar data quality** - ensure lidar is working properly
 3. **Verify IMU calibration** - robot needs proper orientation data
 
@@ -184,8 +184,8 @@ ros2 launch auto_drive autonomous_drive.launch.py enable_autonomous:=false
 ## Architecture
 
 ### Nodes
-- **autonomous_navigator**: Main navigation logic
-- **autonomous_control**: Enable/disable autonomous mode
+- **auto_navigator**: Main navigation logic
+- **auto_control**: Enable/disable auto mode
 - **debug_monitor**: Real-time status monitoring
 
 ### Key Topics

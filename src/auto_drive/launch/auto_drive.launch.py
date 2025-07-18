@@ -24,10 +24,10 @@ def generate_launch_description():
         description='Whether to start RViz for visualization'
     )
     
-    enable_autonomous_arg = DeclareLaunchArgument(
-        'enable_autonomous',
+    enable_auto_arg = DeclareLaunchArgument(
+        'enable_auto',
         default_value='true',
-        description='Enable autonomous driving on startup'
+        description='Enable auto driving on startup'
     )
     
     max_speed_arg = DeclareLaunchArgument(
@@ -54,11 +54,11 @@ def generate_launch_description():
         }.items()
     )
     
-    # Autonomous navigator node
-    autonomous_navigator = Node(
+    # Auto navigator node
+    auto_navigator = Node(
         package='auto_drive',
-        executable='autonomous_navigator',
-        name='autonomous_navigator',
+        executable='auto_navigator',
+        name='auto_navigator',
         output='screen',
         parameters=[{
             'max_speed': LaunchConfiguration('max_speed'),
@@ -80,7 +80,7 @@ def generate_launch_description():
     rviz_config = os.path.join(
         get_package_share_directory('auto_drive'),
         'config',
-        'autonomous_drive.rviz'
+                        'auto_drive.rviz'
     )
     
     rviz_node = Node(
@@ -111,13 +111,13 @@ def generate_launch_description():
     return LaunchDescription([
         # Launch arguments
         use_rviz_arg,
-        enable_autonomous_arg,
+        enable_auto_arg,
         max_speed_arg,
         safety_distance_arg,
         
         # Nodes
         robot_bringup,
-        autonomous_navigator,
+        auto_navigator,
         rviz_node,
         # map_server,  # Uncomment if you want to use saved maps
     ]) 

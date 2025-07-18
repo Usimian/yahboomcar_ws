@@ -1,11 +1,11 @@
-autonomous_navigator:
+auto_navigator:
   ros__parameters:
     # Speed limits
     max_speed: 0.3                    # Maximum linear speed (m/s)
-    max_angular_speed: 0.5           # Maximum angular speed (rad/s)
+    max_angular_speed: 0.4           # Maximum angular speed (rad/s)
     
     # Safety parameters
-    safety_distance: 0.8             # Minimum distance to obstacles (m)
+    safety_distance: 0.5             # Minimum distance to obstacles (m)
     emergency_distance: 0.4          # Emergency stop distance (m)
     goal_tolerance: 0.2              # Goal reaching tolerance (m)
     

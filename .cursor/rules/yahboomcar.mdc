@@ -9,3 +9,4 @@ This project is for the yahboomcar X3 with the S2 lidar and the astra pro plus c
 There are two other workspaces that have relevent context:
     ~/yahboomcar_ros2/yahboom_X3_lib - contains the rosmaster library
     ~/yahboomcar_ros2/library_ws - contains the lidar and Astra Pro Plus camera packages
+All test files should start with test_

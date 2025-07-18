@@ -14,7 +14,7 @@ class AutonomousControl(Node):
     """Simple control interface for autonomous driving"""
 
     def __init__(self):
-        super().__init__('autonomous_control')
+        super().__init__('auto_control')
 
         # Publishers
         self.joy_state_pub = self.create_publisher(Bool, '/JoyState', 10)

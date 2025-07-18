@@ -17,10 +17,10 @@ def generate_launch_description():
     """Generate launch description for headless autonomous driving"""
     
     # Launch arguments
-    enable_autonomous_arg = DeclareLaunchArgument(
-        'enable_autonomous',
+    enable_auto_arg = DeclareLaunchArgument(
+        'enable_auto',
         default_value='true',
-        description='Enable autonomous driving on startup'
+        description='Enable auto driving on startup'
     )
     
     max_speed_arg = DeclareLaunchArgument(
@@ -60,11 +60,11 @@ def generate_launch_description():
         }.items()
     )
     
-    # Autonomous navigator node
-    autonomous_navigator = Node(
+    # Auto navigator node
+    auto_navigator = Node(
         package='auto_drive',
-        executable='autonomous_navigator',
-        name='autonomous_navigator',
+        executable='auto_navigator',
+        name='auto_navigator',
         output='screen',
         parameters=[{
             'max_speed': LaunchConfiguration('max_speed'),
@@ -86,7 +86,7 @@ def generate_launch_description():
     # Optional: Log important topics to console
     log_status_node = Node(
         package='auto_drive',
-        executable='autonomous_control',
+        executable='auto_control',
         name='status_logger',
         output='screen',
         arguments=['status'],
@@ -95,7 +95,7 @@ def generate_launch_description():
     
     return LaunchDescription([
         # Launch arguments
-        enable_autonomous_arg,
+        enable_auto_arg,
         max_speed_arg,
         max_angular_speed_arg,
         safety_distance_arg,
@@ -103,6 +103,6 @@ def generate_launch_description():
         
         # Nodes
         robot_bringup,
-        autonomous_navigator,
+        auto_navigator,
         # log_status_node,  # Uncomment to enable status logging
     ]) 

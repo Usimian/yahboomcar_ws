@@ -9,6 +9,8 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 import math
+import signal
+import sys
 from collections import deque
 from dataclasses import dataclass
 
@@ -38,7 +40,7 @@ class AutonomousNavigator(Node):
     """Main autonomous driving node"""
 
     def __init__(self):
-        super().__init__('autonomous_navigator')
+        super().__init__('auto_navigator')
 
         # State variables
         self.current_pose = Pose2D()
@@ -46,6 +48,7 @@ class AutonomousNavigator(Node):
         self.is_active = False
         self.emergency_stop = False
         self.initialized = False
+        self.shutting_down = False
 
         # Sensor data
         self.laser_data = None
@@ -101,7 +104,7 @@ class AutonomousNavigator(Node):
                                                     self.update_localization)  # 20 Hz
 
         # Initialize autonomous mode based on parameter
-        self.create_timer(2.0, self.initialize_autonomous_mode)  # Wait 2 seconds for startup
+        self.init_timer = self.create_timer(2.0, self.initialize_auto_mode)  # Wait 2 seconds for startup
 
         self.get_logger().info('Autonomous Navigator initialized')
 
@@ -150,7 +153,7 @@ class AutonomousNavigator(Node):
 
     def update_localization(self):
         """Update robot pose using sensor fusion"""
-        if not self.odom_data or not self.imu_data:
+        if self.shutting_down or not self.odom_data or not self.imu_data:
             return
 
         current_time = self.get_clock().now().nanoseconds / 1e9
@@ -253,7 +256,7 @@ class AutonomousNavigator(Node):
 
     def update_map(self):
         """Update occupancy grid map"""
-        if not self.laser_data or not hasattr(self, 'current_pose'):
+        if self.shutting_down or not self.laser_data or not hasattr(self, 'current_pose'):
             return
 
         current_time = self.get_clock().now().nanoseconds / 1e9
@@ -290,26 +293,25 @@ class AutonomousNavigator(Node):
             # Mark free space along the ray
             steps = int(distance / self.map_resolution)
             for step in range(1, steps):
-                ray_distance = step * self.map_resolution
-                ray_x = self.current_pose.x + ray_distance * math.cos(global_angle)
-                ray_y = self.current_pose.y + ray_distance * math.sin(global_angle)
-
+                ray_x = self.current_pose.x + (step * self.map_resolution) * math.cos(global_angle)
+                ray_y = self.current_pose.y + (step * self.map_resolution) * math.sin(global_angle)
+                
                 ray_grid_x = int((ray_x - self.map_origin_x) / self.map_resolution)
                 ray_grid_y = int((ray_y - self.map_origin_y) / self.map_resolution)
-
-                if (0 <= ray_grid_x < self.map_width and
-                        0 <= ray_grid_y < self.map_height):
+                
+                if 0 <= ray_grid_x < self.map_width and 0 <= ray_grid_y < self.map_height:
                     key = (ray_grid_x, ray_grid_y)
                     if key not in self.occupancy_grid:
                         self.occupancy_grid[key] = OccupancyCell()
-
+                    
                     # Mark as free
                     current_prob = self.occupancy_grid[key].probability
                     self.occupancy_grid[key].probability = max(0.0, current_prob - 0.02)
                     self.occupancy_grid[key].last_update = current_time
 
-        # Publish map
-        self.publish_map()
+        # Publish map periodically
+        if len(self.occupancy_grid) > 0:
+            self.publish_map()
 
     def publish_map(self):
         """Publish occupancy grid map"""
@@ -339,7 +341,7 @@ class AutonomousNavigator(Node):
 
     def control_loop(self):
         """Main control loop"""
-        if not self.is_active or not self.laser_data:
+        if self.shutting_down or not self.is_active or not self.laser_data:
             return
 
         params = self.get_parameters()
@@ -504,7 +506,7 @@ class AutonomousNavigator(Node):
 
         return min_distance if min_distance != float('inf') else 10.0  # Return large value if no valid readings
 
-    def initialize_autonomous_mode(self):
+    def initialize_auto_mode(self):
         """Initialize autonomous mode based on parameter"""
         if self.initialized:
             return
@@ -519,21 +521,113 @@ class AutonomousNavigator(Node):
         
         self.initialized = True
 
+    def shutdown(self):
+        """Properly shutdown the navigator"""
+        if self.shutting_down:
+            return
+        
+        self.shutting_down = True
+        self.get_logger().info('Shutting down Autonomous Navigator...')
+        
+        # Stop the robot immediately
+        stop_cmd = Twist()
+        try:
+            self.cmd_vel_pub.publish(stop_cmd)
+            self.get_logger().info('Robot stopped')
+        except Exception as e:
+            self.get_logger().warn(f'Failed to stop robot: {e}')
+        
+        # Cancel all timers
+        try:
+            if hasattr(self, 'control_timer'):
+                self.control_timer.cancel()
+            if hasattr(self, 'mapping_timer'):
+                self.mapping_timer.cancel()
+            if hasattr(self, 'localization_timer'):
+                self.localization_timer.cancel()
+            if hasattr(self, 'init_timer'):
+                self.init_timer.cancel()
+            self.get_logger().info('All timers cancelled')
+        except Exception as e:
+            self.get_logger().warn(f'Error cancelling timers: {e}')
+        
+        # Destroy subscriptions and publishers
+        try:
+            if hasattr(self, 'laser_sub'):
+                self.destroy_subscription(self.laser_sub)
+            if hasattr(self, 'imu_sub'):
+                self.destroy_subscription(self.imu_sub)
+            if hasattr(self, 'odom_sub'):
+                self.destroy_subscription(self.odom_sub)
+            if hasattr(self, 'joy_sub'):
+                self.destroy_subscription(self.joy_sub)
+            self.get_logger().info('Subscriptions destroyed')
+        except Exception as e:
+            self.get_logger().warn(f'Error destroying subscriptions: {e}')
+        
+        # Clear data structures
+        self.occupancy_grid.clear()
+        self.pose_history.clear()
+        
+        self.get_logger().info('Autonomous Navigator shutdown complete')
+
+# Global variable to store the navigator instance for signal handling
+navigator_instance = None
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals"""
+    global navigator_instance
+    print(f"\nReceived signal {signum}. Shutting down gracefully...")
+    
+    if navigator_instance:
+        navigator_instance.shutdown()
+    
+    # Give some time for cleanup
+    import time
+    time.sleep(1)
+    
+    # Force shutdown ROS
+    try:
+        rclpy.shutdown()
+    except:
+        pass
+    
+    sys.exit(0)
 
 def main(args=None):
     """Main function"""
+    global navigator_instance
+    
+    # Set up signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     rclpy.init(args=args)
 
     try:
-        navigator = AutonomousNavigator()
-        rclpy.spin(navigator)
+        navigator_instance = AutonomousNavigator()
+        rclpy.spin(navigator_instance)
     except KeyboardInterrupt:
-        pass
+        print("\nKeyboard interrupt received")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
     finally:
-        if 'navigator' in locals():
-            navigator.destroy_node()
-        rclpy.shutdown()
-
+        print("Cleaning up...")
+        if navigator_instance:
+            navigator_instance.shutdown()
+        
+        try:
+            if navigator_instance:
+                navigator_instance.destroy_node()
+        except:
+            pass
+        
+        try:
+            rclpy.shutdown()
+        except:
+            pass
+        
+        print("Shutdown complete")
 
 if __name__ == '__main__':
     main()

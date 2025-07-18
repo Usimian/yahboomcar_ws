@@ -150,7 +150,7 @@ class JoyTeleop(Node):
 		twist.linear.y = ylinear_speed
 		twist.angular.z = angular_speed
 		if self.Joy_active == True:
-			print("joy control now")
+			# print("joy control now")
 			for i in range(3): self.pub_cmdVel.publish(twist)
 
 

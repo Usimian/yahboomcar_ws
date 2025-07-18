@@ -47,10 +47,14 @@ class DebugMonitor(Node):
         self.last_pose_y = 0.0
         self.pose_change_threshold = 0.01  # 1cm threshold for position changes
 
-        # Create timer for status updates
-        self.status_timer = self.create_timer(2.0, self.print_status)
+        # Declare parameters
+        self.declare_parameter('update_rate', 2.0)
+        update_rate = float(self.get_parameter('update_rate').value or 2.0)
 
-        self.get_logger().info('Debug Monitor started')
+        # Create timer for status updates
+        self.status_timer = self.create_timer(update_rate, self.print_status)
+
+        self.get_logger().info(f'Debug Monitor started with update rate: {update_rate}s')
 
     def cmd_vel_callback(self, msg):
         """Track velocity commands"""
@@ -151,91 +155,125 @@ class DebugMonitor(Node):
         return self.last_pose_x, self.last_pose_y
 
     def print_status(self):
-        """Print current status"""
-        print("\n" + "="*70)
-        print("AUTONOMOUS NAVIGATION DEBUG STATUS")
-        print("="*70)
-
-        # Joystick state
-        if self.joy_state is not None:
-            mode = "MANUAL" if self.joy_state.data else "AUTONOMOUS"
-            print(f"Mode: {mode}")
-        else:
-            print("Mode: UNKNOWN (no JoyState data)")
-
-        # Battery level
-        battery_status = self.get_battery_status()
-        print(f"Battery: {battery_status}")
-
-        # Current command with sideways movement
-        if self.current_cmd:
-            linear_x = self.current_cmd.linear.x
-            linear_y = self.current_cmd.linear.y  # Sideways movement
-            angular_z = self.current_cmd.angular.z
+        """Print current status - only in manual mode"""
+        try:
+            # Only show debug output in manual mode
+            if self.joy_state is not None and not self.joy_state.data:
+                # joy_state.data = False means autonomous mode, so skip debug output
+                return
             
-            print(f"Velocity Commands:")
-            print(f"  Forward/Backward: {linear_x:.3f} m/s")
-            print(f"  Sideways (Left/Right): {linear_y:.3f} m/s")
-            print(f"  Rotation: {angular_z:.3f} rad/s")
-            
-            # Calculate total speed
-            total_linear_speed = math.sqrt(linear_x**2 + linear_y**2)
-            print(f"  Total Speed: {total_linear_speed:.3f} m/s")
-            
-            # Movement direction
-            if abs(linear_x) > 0.01 or abs(linear_y) > 0.01:
-                direction_angle = math.degrees(math.atan2(linear_y, linear_x))
-                print(f"  Direction: {direction_angle:.1f}° (0°=forward, 90°=left)")
-        else:
-            print("Velocity Commands: No commands received")
+            # Joystick state
+            try:
+                if self.joy_state is not None:
+                    mode = "MANUAL" if self.joy_state.data else "AUTONOMOUS"
+                    print(f"Mode: {mode}")
+                else:
+                    print("Mode: UNKNOWN (no JoyState data)")
+            except Exception as e:
+                print(f"Mode: ERROR ({e})")
 
-        # Stable pose
-        stable_x, stable_y = self.get_stable_position()
-        if stable_x is not None and stable_y is not None:
-            print(f"Position: X={stable_x:.3f}m, Y={stable_y:.3f}m")
-        else:
-            print("Position: No pose data")
+            # Battery level
+            try:
+                battery_status = self.get_battery_status()
+                print(f"Battery: {battery_status}")
+            except Exception as e:
+                print(f"Battery: ERROR ({e})")
 
-        # Laser distances with corrected angle calculations
-        if self.laser_data:
-            # IMPORTANT: Lidar coordinate system appears to be rotated 180°
-            # What we call "back" is actually the front of the robot
-            # Adjusting sectors accordingly:
-            front = self.get_sector_distance(150, -150)      # Back sector (wrap-around) = actual front
-            left = self.get_sector_distance(-120, -60)       # Right sector = actual left  
-            right = self.get_sector_distance(60, 120)        # Left sector = actual right
-            back = self.get_sector_distance(-30, 30)         # Front sector = actual back
-            
-            print(f"Obstacle Distances:")
-            print(f"  Front: {front:.3f}m")
-            print(f"  Left:  {left:.3f}m")
-            print(f"  Right: {right:.3f}m")
-            print(f"  Back:  {back:.3f}m")
-            
-            # Debug: Show raw angle range and some sample readings
-            if hasattr(self.laser_data, 'angle_min') and hasattr(self.laser_data, 'angle_max'):
-                angle_min_deg = math.degrees(self.laser_data.angle_min)
-                angle_max_deg = math.degrees(self.laser_data.angle_max)
-                num_readings = len(self.laser_data.ranges)
-                print(f"  Lidar: {angle_min_deg:.1f}° to {angle_max_deg:.1f}° ({num_readings} readings)")
-                
-                # Show some sample readings for debugging
-                if num_readings > 0:
-                    front_idx = num_readings // 2  # Middle should be 0° 
-                    back_idx = 0  # First reading should be -180°
-                    quarter_idx = num_readings // 4  # Should be -90°
+            # Current command with sideways movement
+            try:
+                if self.current_cmd:
+                    linear_x = self.current_cmd.linear.x
+                    linear_y = self.current_cmd.linear.y  # Sideways movement
+                    angular_z = self.current_cmd.angular.z
                     
-                    if front_idx < len(self.laser_data.ranges):
-                        front_reading = self.laser_data.ranges[front_idx]
-                        print(f"  Debug: 0° reading[{front_idx}] = {front_reading:.3f}m")
+                    print(f"Velocity Commands:")
+                    print(f"  Forward/Backward: {linear_x:.3f} m/s")
+                    print(f"  Sideways (Left/Right): {linear_y:.3f} m/s")
+                    print(f"  Rotation: {angular_z:.3f} rad/s")
                     
-                    if back_idx < len(self.laser_data.ranges):
-                        back_reading = self.laser_data.ranges[back_idx]
-                        print(f"  Debug: -180° reading[{back_idx}] = {back_reading:.3f}m")
-        else:
-            print("Obstacle Distances: No laser data")
+                    # Calculate total speed
+                    total_linear_speed = math.sqrt(linear_x**2 + linear_y**2)
+                    print(f"  Total Speed: {total_linear_speed:.3f} m/s")
+                    
+                    # Movement direction
+                    if abs(linear_x) > 0.01 or abs(linear_y) > 0.01:
+                        direction_angle = math.degrees(math.atan2(linear_y, linear_x))
+                        print(f"  Direction: {direction_angle:.1f}° (0°=forward, 90°=left)")
+                else:
+                    print("Velocity Commands: No commands received")
+            except Exception as e:
+                print(f"Velocity Commands: ERROR ({e})")
 
-        print("="*70)
+            # Stable pose
+            try:
+                stable_x, stable_y = self.get_stable_position()
+                if stable_x is not None and stable_y is not None:
+                    print(f"Position: X={stable_x:.3f}m, Y={stable_y:.3f}m")
+                else:
+                    print("Position: No pose data")
+            except Exception as e:
+                print(f"Position: ERROR ({e})")
+                import traceback
+                traceback.print_exc()
+
+            # Laser distances with corrected angle calculations
+            try:
+                if self.laser_data:
+                    # IMPORTANT: Lidar coordinate system appears to be rotated 180°
+                    # What we call "back" is actually the front of the robot
+                    # Adjusting sectors accordingly:
+                    front = self.get_sector_distance(150, -150)      # Back sector (wrap-around) = actual front
+                    left = self.get_sector_distance(-120, -60)       # Right sector = actual left  
+                    right = self.get_sector_distance(60, 120)        # Left sector = actual right
+                    back = self.get_sector_distance(-30, 30)         # Front sector = actual back
+                    
+                    print(f"Obstacle Distances:")
+                    print(f"  Front: {front:.3f}m")
+                    print(f"  Left:  {left:.3f}m")
+                    print(f"  Right: {right:.3f}m")
+                    print(f"  Back:  {back:.3f}m")
+                    
+                    # Debug: Show raw angle range and some sample readings
+                    if hasattr(self.laser_data, 'angle_min') and hasattr(self.laser_data, 'angle_max'):
+                        angle_min_deg = math.degrees(self.laser_data.angle_min)
+                        angle_max_deg = math.degrees(self.laser_data.angle_max)
+                        num_readings = len(self.laser_data.ranges)
+                        print(f"  Lidar: {angle_min_deg:.1f}° to {angle_max_deg:.1f}° ({num_readings} readings)")
+                        
+                        # Show some sample readings for debugging
+                        if num_readings > 0:
+                            front_idx = num_readings // 2  # Middle should be 0° 
+                            back_idx = 0  # First reading should be -180°
+                            
+                            if front_idx < len(self.laser_data.ranges):
+                                front_reading = self.laser_data.ranges[front_idx]
+                                front_str = f"{front_reading:.3f}m" if not (math.isnan(front_reading) or math.isinf(front_reading)) else "inf"
+                                print(f"  Debug: 0° reading[{front_idx}] = {front_str}")
+                            
+                            if back_idx < len(self.laser_data.ranges):
+                                back_reading = self.laser_data.ranges[back_idx]
+                                back_str = f"{back_reading:.3f}m" if not (math.isnan(back_reading) or math.isinf(back_reading)) else "inf"
+                                print(f"  Debug: -180° reading[{back_idx}] = {back_str}")
+                else:
+                    print("Obstacle Distances: No laser data")
+                    print("DEBUG: No laser data available")  # Debug marker
+            except Exception as e:
+                print(f"Obstacle Distances: ERROR ({e})")
+                import traceback
+                traceback.print_exc()
+
+            print("="*70)
+            
+            # Force flush the output to ensure it's displayed
+            import sys
+            sys.stdout.flush()
+            
+        except Exception as e:
+            print(f"DEBUG MONITOR ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+            import sys
+            sys.stdout.flush()
 
 
 def main(args=None):
