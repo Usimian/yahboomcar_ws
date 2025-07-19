@@ -21,6 +21,8 @@ auto_navigator:
     map_height: 400                  # Map height (cells) - 20m at 0.05m resolution
     map_origin_x: -10.0              # Map origin X (m)
     map_origin_y: -10.0              # Map origin Y (m)
+    map_decay_time: 10.0             # Time (s) before map data starts to decay
+    map_decay_rate: 0.01             # Rate of decay per second (0.0 = no decay)
     
     # Obstacle detection
     obstacle_probability_increment: 0.1    # Probability increase for obstacles

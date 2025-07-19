@@ -25,10 +25,12 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-                    'auto_navigator = auto_drive.auto_navigator:main',
-        'auto_control = auto_drive.auto_control:main',
+            'auto_navigator = auto_drive.auto_navigator:main',
+            'auto_control = auto_drive.auto_control:main',
             'debug_monitor = auto_drive.debug_monitor:main',
             'shutdown_auto = auto_drive.shutdown_auto:main',
+            'test_mapping_verification = auto_drive.test_mapping_verification:main',
+            'mapping_debug = auto_drive.mapping_debug:main',
         ],
     },
 )

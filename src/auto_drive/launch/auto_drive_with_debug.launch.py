@@ -24,10 +24,10 @@ def generate_launch_description():
         description='Whether to start RViz for visualization'
     )
     
-    enable_auto_arg = DeclareLaunchArgument(
-        'enable_auto',
+    enable_autonomous_arg = DeclareLaunchArgument(
+        'enable_autonomous',
         default_value='true',
-        description='Enable auto driving on startup'
+        description='Enable autonomous driving on startup'
     )
     
     max_speed_arg = DeclareLaunchArgument(
@@ -77,7 +77,7 @@ def generate_launch_description():
             'max_angular_speed': 0.5,
             'safety_distance': LaunchConfiguration('safety_distance'),
             'emergency_distance': 0.4,
-            'enable_autonomous': LaunchConfiguration('enable_auto')
+            'enable_autonomous': LaunchConfiguration('enable_autonomous')
         }],
         remappings=[
             ('/cmd_vel', '/cmd_vel'),
@@ -140,7 +140,7 @@ def generate_launch_description():
     return LaunchDescription([
         # Launch arguments
         use_rviz_arg,
-        enable_auto_arg,
+        enable_autonomous_arg,
         max_speed_arg,
         safety_distance_arg,
         debug_update_rate_arg,

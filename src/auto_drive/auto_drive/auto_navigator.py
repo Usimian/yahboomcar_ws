@@ -6,7 +6,7 @@ Integrates lidar, IMU, and wheel encoders for localization and mapping
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 
 import math
 import signal
@@ -60,6 +60,9 @@ class AutonomousNavigator(Node):
         self.last_odom_time = 0.0
         self.last_imu_time = 0.0
 
+        # Navigation parameters - declare first
+        self.declare_navigation_parameters()
+
         # Mapping
         self.map_resolution = 0.05  # 5cm per cell
         self.map_width = 400  # 20m x 20m map
@@ -67,19 +70,22 @@ class AutonomousNavigator(Node):
         self.occupancy_grid = {}  # Sparse representation
         self.map_origin_x = -10.0  # Map center at robot start
         self.map_origin_y = -10.0
-
-        # Navigation parameters
-        self.declare_navigation_parameters()
+        # Get mapping parameters from config
+        self.map_decay_time = float(self.get_parameter('map_decay_time').value or 10.0)
+        self.map_decay_rate = float(self.get_parameter('map_decay_rate').value or 0.01)
 
         # QoS profiles
         self.sensor_qos = QoSProfile(depth=1,
                                      reliability=ReliabilityPolicy.BEST_EFFORT)
         self.control_qos = QoSProfile(depth=10,
                                       reliability=ReliabilityPolicy.RELIABLE)
+        self.map_qos = QoSProfile(depth=1,
+                                  reliability=ReliabilityPolicy.RELIABLE,
+                                  durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
         # Publishers
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
-        self.map_pub = self.create_publisher(OccupancyGrid, '/auto_drive/map', 1)
+        self.map_pub = self.create_publisher(OccupancyGrid, '/auto_drive/map', self.map_qos)
         self.pose_pub = self.create_publisher(PoseStamped, '/auto_drive/pose', 10)
 
         # Subscribers
@@ -102,6 +108,7 @@ class AutonomousNavigator(Node):
         self.mapping_timer = self.create_timer(0.2, self.update_map)    # 5 Hz
         self.localization_timer = self.create_timer(0.05,
                                                     self.update_localization)  # 20 Hz
+        self.manual_monitor_timer = self.create_timer(2.0, self.manual_mode_monitor)  # 0.5 Hz (every 2 seconds)
 
         # Initialize autonomous mode based on parameter
         self.init_timer = self.create_timer(2.0, self.initialize_auto_mode)  # Wait 2 seconds for startup
@@ -116,6 +123,8 @@ class AutonomousNavigator(Node):
         self.declare_parameter('emergency_distance', 0.4)
         self.declare_parameter('goal_tolerance', 0.2)
         self.declare_parameter('enable_autonomous', True)
+        self.declare_parameter('map_decay_time', 10.0)
+        self.declare_parameter('map_decay_rate', 0.01)
 
     def get_parameters(self):
         """Get current parameters"""
@@ -257,15 +266,23 @@ class AutonomousNavigator(Node):
     def update_map(self):
         """Update occupancy grid map"""
         if self.shutting_down or not self.laser_data or not hasattr(self, 'current_pose'):
+            # Always publish map even if no data to show empty/unknown map
+            self.publish_map()
             return
 
         current_time = self.get_clock().now().nanoseconds / 1e9
+
+        # Debug: Track how many points we process
+        processed_points = 0
+        valid_obstacles = 0
 
         # Process laser scan
         for i, distance in enumerate(self.laser_data.ranges):
             if (distance < self.laser_data.range_min or
                     distance > self.laser_data.range_max):
                 continue
+
+            processed_points += 1
 
             # Calculate angle
             angle = self.laser_data.angle_min + i * self.laser_data.angle_increment
@@ -289,6 +306,7 @@ class AutonomousNavigator(Node):
                 current_prob = self.occupancy_grid[key].probability
                 self.occupancy_grid[key].probability = min(1.0, current_prob + 0.1)
                 self.occupancy_grid[key].last_update = current_time
+                valid_obstacles += 1
 
             # Mark free space along the ray
             steps = int(distance / self.map_resolution)
@@ -309,9 +327,43 @@ class AutonomousNavigator(Node):
                     self.occupancy_grid[key].probability = max(0.0, current_prob - 0.02)
                     self.occupancy_grid[key].last_update = current_time
 
-        # Publish map periodically
-        if len(self.occupancy_grid) > 0:
-            self.publish_map()
+        # Debug logging (every 50 updates to avoid spam)
+        if hasattr(self, '_map_update_count'):
+            self._map_update_count += 1
+        else:
+            self._map_update_count = 1
+            
+        if self._map_update_count % 50 == 0:
+            self.get_logger().info(f'Map update: processed {processed_points} points, '
+                                 f'{valid_obstacles} valid obstacles, '
+                                 f'{len(self.occupancy_grid)} total cells')
+
+        # Apply map decay to old data (but don't remove cells completely)
+        self.apply_map_decay(current_time)
+
+        # Always publish map
+        self.publish_map()
+
+    def apply_map_decay(self, current_time):
+        """Apply time-based decay to map data"""
+        # Note: We no longer remove cells completely to maintain map history
+        
+        for key, cell in self.occupancy_grid.items():
+            time_since_update = current_time - cell.last_update
+            
+            # Only apply decay after decay_time has passed
+            if time_since_update > self.map_decay_time:
+                # Decay the certainty - move probability toward 0.5 (unknown)
+                decay_amount = self.map_decay_rate * (time_since_update - self.map_decay_time)
+                
+                if cell.probability > 0.5:
+                    # Occupied cell - decay toward unknown
+                    cell.probability = max(0.5, cell.probability - decay_amount)
+                elif cell.probability < 0.5:
+                    # Free cell - decay toward unknown  
+                    cell.probability = min(0.5, cell.probability + decay_amount)
+                
+                # Don't remove cells - keep them as unknown for visualization
 
     def publish_map(self):
         """Publish occupancy grid map"""
@@ -334,14 +386,21 @@ class AutonomousNavigator(Node):
             if 0 <= x < self.map_width and 0 <= y < self.map_height:
                 index = y * self.map_width + x
                 # Convert probability to occupancy value (0-100)
-                data[index] = int(cell.probability * 100)
+                occupancy_value = int(cell.probability * 100)
+                # Ensure values are in valid range
+                data[index] = max(0, min(100, occupancy_value))
 
         map_msg.data = data
         self.map_pub.publish(map_msg)
 
     def control_loop(self):
         """Main control loop"""
-        if self.shutting_down or not self.is_active or not self.laser_data:
+        if self.shutting_down or not self.laser_data:
+            return
+
+        # Check if autonomous mode is active - JoyState overrides launch parameter
+        if not self.is_active:
+            # In manual mode, just return without sending any commands
             return
 
         params = self.get_parameters()
@@ -361,6 +420,37 @@ class AutonomousNavigator(Node):
         # Simple obstacle avoidance navigation
         cmd = self.calculate_safe_velocity()
         self.cmd_vel_pub.publish(cmd)
+
+    def manual_mode_monitor(self):
+        """Monitor and report obstacle distances in manual mode"""
+        if self.shutting_down or not self.laser_data:
+            return
+            
+        # Only show obstacle info in manual mode
+        if self.is_active:  # is_active = True means autonomous mode
+            return
+            
+        # Calculate distances in all sectors
+        left_distance = self.get_sector_distance(-120, -60)      # Right sector = actual left
+        right_distance = self.get_sector_distance(60, 120)       # Left sector = actual right
+        front_distance = self.get_sector_distance(150, -150)     # Back sector (wrap-around) = actual front
+        front_left_distance = self.get_sector_distance(-150, -120) # Back-right sector = actual front-left
+        front_right_distance = self.get_sector_distance(120, 150)  # Back-left sector = actual front-right
+        
+        # Get minimum front distance for safety awareness
+        min_front_distance = min(front_distance, front_left_distance, front_right_distance)
+        
+        # Create status message
+        status = f"MANUAL MODE - Obstacles: Front: {min_front_distance:.2f}m, Left: {left_distance:.2f}m, Right: {right_distance:.2f}m"
+        
+        # Add warning if obstacles are close
+        params = self.get_parameters()
+        if min_front_distance < params['safety_distance']:
+            status += f" ⚠️  CLOSE OBSTACLE AHEAD!"
+        elif left_distance < params['safety_distance'] or right_distance < params['safety_distance']:
+            status += f" ⚠️  Side obstacles detected"
+            
+        self.get_logger().info(status)
 
     def check_emergency_stop(self):
         """Check if emergency stop is needed"""
@@ -421,17 +511,17 @@ class AutonomousNavigator(Node):
             # Choose turn direction based on clearer side
             if left_distance > right_distance + 0.2:  # Bias towards left
                 cmd.angular.z = params['max_angular_speed'] * 0.7
-                self.get_logger().info(f'Turning left - Left: {left_distance:.2f}m, Right: {right_distance:.2f}m')
+                self.get_logger().info(f'Turning left - Front: {min_front_distance:.2f}m, Left: {left_distance:.2f}m, Right: {right_distance:.2f}m')
             elif right_distance > left_distance + 0.2:  # Bias towards right
                 cmd.angular.z = -params['max_angular_speed'] * 0.7
-                self.get_logger().info(f'Turning right - Left: {left_distance:.2f}m, Right: {right_distance:.2f}m')
+                self.get_logger().info(f'Turning right - Front: {min_front_distance:.2f}m, Left: {left_distance:.2f}m, Right: {right_distance:.2f}m')
             else:
                 # If both sides are similar, turn towards the slightly better side
                 if left_distance >= right_distance:
                     cmd.angular.z = params['max_angular_speed'] * 0.5
                 else:
                     cmd.angular.z = -params['max_angular_speed'] * 0.5
-                self.get_logger().info(f'Obstacle ahead - turning (L:{left_distance:.2f}m, R:{right_distance:.2f}m)')
+                self.get_logger().info(f'Obstacle ahead - turning (Front: {min_front_distance:.2f}m, Left: {left_distance:.2f}m, Right: {right_distance:.2f}m)')
         
         elif front_distance > params['safety_distance'] * 2.0:
             # Lots of space ahead - move forward but with some exploration
@@ -507,17 +597,14 @@ class AutonomousNavigator(Node):
         return min_distance if min_distance != float('inf') else 10.0  # Return large value if no valid readings
 
     def initialize_auto_mode(self):
-        """Initialize autonomous mode based on parameter"""
+        """Initialize autonomous mode based on parameter - START IN MANUAL MODE BY DEFAULT"""
         if self.initialized:
             return
             
-        params = self.get_parameters()
-        if params.get('enable_autonomous', True):
-            self.is_active = True
-            self.get_logger().info('Autonomous mode ENABLED by parameter')
-        else:
-            self.is_active = False
-            self.get_logger().info('Autonomous mode DISABLED by parameter')
+        # Always start in manual mode for safety - user must explicitly enable autonomous mode
+        self.is_active = False
+        self.get_logger().info('System started in MANUAL MODE (safe default)')
+        self.get_logger().info('Use "ros2 run auto_drive auto_control enable" to activate autonomous mode')
         
         self.initialized = True
 
@@ -545,6 +632,8 @@ class AutonomousNavigator(Node):
                 self.mapping_timer.cancel()
             if hasattr(self, 'localization_timer'):
                 self.localization_timer.cancel()
+            if hasattr(self, 'manual_monitor_timer'):
+                self.manual_monitor_timer.cancel()
             if hasattr(self, 'init_timer'):
                 self.init_timer.cancel()
             self.get_logger().info('All timers cancelled')
