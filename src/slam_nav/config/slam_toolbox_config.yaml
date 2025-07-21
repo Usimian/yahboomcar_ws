@@ -24,15 +24,15 @@ slam_toolbox:
     #map_start_pose: [0.0, 0.0, 0.0]
     #map_start_at_dock: true
 
-    debug_logging: false
+    debug_logging: true  # Enable debug logging to diagnose issues
     throttle_scans: 1
-    transform_publish_period: 0.05 #if 0 never publishes odometry
-    map_update_interval: 5.0
-    resolution: 0.05
-    max_laser_range: 8.0 #for rastering images
-    min_laser_range: 0.1 #S2 lidar minimum range
-    minimum_time_interval: 0.5
-    transform_timeout: 1.0
+    transform_publish_period: 0.02  # Publish transforms more frequently
+    map_update_interval: 1.0  # Update map more frequently (was 5.0)
+    resolution: 0.05  # cm per pixel
+    max_laser_range: 8.0  # Match S2 lidar max range specification
+    min_laser_range: 0.05  # Lower minimum range for better close obstacle detection
+    minimum_time_interval: 0.1  # Reduce minimum time interval for faster updates
+    transform_timeout: 2.0  # Increase timeout for more reliable transforms
     tf_buffer_duration: 30.0
     stack_size_to_use: 40000000 #// program needs a larger stack size to serialize large maps
     enable_interactive_mode: true
@@ -40,8 +40,8 @@ slam_toolbox:
     # General Parameters
     use_scan_matching: true
     use_scan_barycenter: true
-    minimum_travel_distance: 0.05
-    minimum_travel_heading: 0.05
+    minimum_travel_distance: 0.02  # Reduce minimum travel distance for more frequent updates
+    minimum_travel_heading: 0.02   # Reduce minimum rotation for more frequent updates
     scan_buffer_size: 10
     scan_buffer_maximum_scan_distance: 10.0
     link_match_minimum_response_fine: 0.1  
