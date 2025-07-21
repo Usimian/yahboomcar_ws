@@ -19,7 +19,7 @@ def generate_launch_description():
         os.environ["PRINTED"] = "1"
         print("---------------------robot_type = x3---------------------")
     urdf_tutorial_path = get_package_share_path('yahboomcar_description')
-    default_model_path = urdf_tutorial_path / 'urdf/yahboomcar_X3.urdf'
+    default_model_path = urdf_tutorial_path / 'urdf/yahboomcar_X3_simple.urdf'
     default_rviz_config_path = urdf_tutorial_path / 'rviz/yahboomcar.rviz'
 
     gui_arg = DeclareLaunchArgument(name='gui', default_value='false', choices=['true', 'false'],

@@ -9,7 +9,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
     KCFTracker_node = Node(
-        package='yahboomcar_KCFTracker',
+        package='yahboomcar_kcf_tracker',
         executable='KCF_Tracker_Node',
     )
 

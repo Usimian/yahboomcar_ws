@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(yahboomcar_KCFTracker)
+project(yahboomcar_kcf_tracker)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)

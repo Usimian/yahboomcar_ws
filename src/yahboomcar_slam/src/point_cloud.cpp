@@ -5,7 +5,7 @@ using namespace std;
 PointCloudMapper::PointCloudMapper() : Node("pointcloud_mapping")
 {
     float fx_, fy_, cx_, cy_, resolution_, depthfactor_;
-    int queueSize_;
+    int queueSize_ = 10;  // Initialize to default value
     bool mbuseExact_;
 
     mbuseCompressed = false;

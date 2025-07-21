@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 project(yahboomcar_slam)
 
+# Set CMake policy to suppress PCL_ROOT variable warning
+cmake_policy(SET CMP0074 NEW)
+
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)

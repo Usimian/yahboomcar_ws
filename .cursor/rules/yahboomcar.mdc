@@ -2,7 +2,7 @@
 alwaysApply: true
 ---
 
-This is a ROS2 workspace.
+This is a ROS2 humble workspace.
 The language is Python or C++
 The ROS2 packages have been sourced.
 This project is for the yahboomcar X3 with the S2 lidar and the astra pro plus camera

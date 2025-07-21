@@ -22,7 +22,9 @@ setup(
     maintainer_email='marc.wester@gmail.com',
     description='Autonomous driving package for yahboomcar with advanced navigation and decision-making capabilities',
     license='MIT',
-    tests_require=['pytest'],
+    extras_require={
+        'test': ['pytest'],
+    },
     entry_points={
         'console_scripts': [
             'auto_navigator = auto_drive.auto_navigator:main',

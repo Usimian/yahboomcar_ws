@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
 """
-Launch file for yahboomcar X3 with S2 lidar
-This launch file brings up the complete robot system including:
+Robot bringup launch file for slam_nav package
+Brings up the complete robot system including:
 - Robot hardware drivers
-- Base node for odometry and transforms
+- Base node for odometry and transforms  
 - IMU filtering
 - EKF for sensor fusion
 - S2 lidar
 - Robot state publisher
 - Joint state publisher
-- Joystick control
 """
 
 import os
@@ -26,9 +25,9 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     # Print robot configuration
-    if not os.environ.get("PRINTED"):
-        os.environ["PRINTED"] = "1"
-        print("---------------------robot_type = X3 with S2 lidar---------------------")
+    if not os.environ.get("PRINTED_SLAM_NAV"):
+        os.environ["PRINTED_SLAM_NAV"] = "1"
+        print("---------------------SLAM NAV: X3 with S2 lidar---------------------")
     
     # Get package paths
     urdf_tutorial_path = get_package_share_path('yahboomcar_description')
@@ -151,14 +150,14 @@ def generate_launch_description():
         'imu_filter_param.yaml'
     )
     
-    # IMU filter node
-    imu_filter_node = Node(
-        package='imu_filter_madgwick',
-        executable='imu_filter_madgwick_node',
-        name='imu_filter',
-        output='screen',
-        parameters=[imu_filter_config]
-    )
+    # IMU filter node - TEMPORARILY DISABLED for debugging
+    # imu_filter_node = Node(
+    #     package='imu_filter_madgwick',
+    #     executable='imu_filter_madgwick_node',
+    #     name='imu_filter',
+    #     output='screen',
+    #     parameters=[imu_filter_config]
+    # )
     
     # EKF for sensor fusion
     ekf_node = IncludeLaunchDescription(
@@ -223,8 +222,8 @@ def generate_launch_description():
         driver_node,
         base_node,
         
-        # IMU and sensor fusion
-        imu_filter_node,
+        # IMU and sensor fusion - IMU filter temporarily disabled
+        # imu_filter_node,
         ekf_node,
         
         # Lidar

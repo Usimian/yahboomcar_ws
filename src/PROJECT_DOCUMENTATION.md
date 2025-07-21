@@ -32,7 +32,7 @@ yahboomcar_ws/
 │   ├── yahboomcar_linefollow/      # Line following algorithms
 │   ├── yahboomcar_voice_ctrl/      # Voice control functionality
 │   ├── yahboomcar_point/           # Point cloud processing
-│   ├── yahboomcar_KCFTracker/      # KCF object tracking
+│   ├── yahboomcar_kcf_tracker/      # KCF object tracking
 │   ├── yahboomcar_rviz/            # RViz configurations
 │   └── Additional packages...
 ├── build/                          # Build artifacts

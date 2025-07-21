@@ -42,7 +42,7 @@ class mediapipeCloud:public rclcpp ::Node
             cloud.points.resize(num_points);
             sensor_msgs::msg::PointCloud2 output_msg;
             output_msg.header.stamp = rclcpp::Clock().now();
-            for (int i = 0; i < msg->points.size(); i++)
+            for (size_t i = 0; i < msg->points.size(); i++)
             {
             	std::cout << msg->points[i].x<<std::endl;
             	geometry_msgs::msg::Point Point;
