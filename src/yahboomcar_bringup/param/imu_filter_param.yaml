@@ -1,16 +1,16 @@
-complementary_filter_gain_node:
+imu_filter:
   ros__parameters:
-    gain_acc: 0.02
+    gain_acc: 0.01  # Lower gain for more stable filtering
     gain_mag: 0.01
     bias_alpha: 0.1
-    do_bias_estimation: false
-    do_adaptive_gain: false
-    use_mag: false
-    fixed_frame: "base_link"
-    publish_tf: false
+    do_bias_estimation: true  # Enable bias estimation for better accuracy
+    do_adaptive_gain: true    # Enable adaptive gain for dynamic situations
+    use_mag: false            # Don't use magnetometer (can be noisy indoors)
+    fixed_frame: "base_footprint"  # Use base_footprint to match EKF configuration
+    publish_tf: false         # CRITICAL: EKF will handle transforms, not IMU filter
     reverse_tf: false
-    constant_dt: 0.0
-    publish_debug_topics: false
+    constant_dt: 0.0          # Use message timestamps
+    publish_debug_topics: true  # Enable debug topics for troubleshooting
 
     qos_overrides:
       /imu/data_raw:

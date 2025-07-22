@@ -53,33 +53,44 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             [os.path.join(get_package_share_directory('sllidar_ros2'), 'launch'),
             '/sllidar_launch.py']),
+        launch_arguments={
+            'frame_id': 'laser_link'  # Use laser_link to match URDF
+        }.items(),
         condition=LaunchConfigurationEquals('rplidar_type', 'a1')
     )
     lidar_s2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [os.path.join(get_package_share_directory('sllidar_ros2'), 'launch'),
             '/sllidar_s2_launch.py']),
+        launch_arguments={
+            'frame_id': 'laser_link'  # Use laser_link to match URDF
+        }.items(),
         condition=LaunchConfigurationEquals('rplidar_type', 's2')
     )
     lidar_4ROS_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [os.path.join(get_package_share_directory('ydlidar_ros2_driver'), 'launch'),
             '/ydlidar_raw_launch.py']),
+        launch_arguments={
+            'frame_id': 'laser_link'  # Use laser_link to match URDF
+        }.items(),
         condition=LaunchConfigurationEquals('rplidar_type', '4ROS')
     )
 
-    if rplidar_type == '4ROS':
-        tf_base_link_to_laser = Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            arguments=['0.0435', '5.258E-05', '0.11', '0.0', '0', '0', 'base_link', 'laser']
-        )
-    else:
-        tf_base_link_to_laser = Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            arguments=['0.0435', '5.258E-05', '0.11', '3.14', '0', '0', 'base_link', 'laser']
-        )
+    # REMOVED: Conflicting static transforms - let URDF handle all static transforms
+    # The robot_state_publisher will publish the base_link -> laser_link transform
+    # if rplidar_type == '4ROS':
+    #     tf_base_link_to_laser = Node(
+    #         package='tf2_ros',
+    #         executable='static_transform_publisher',
+    #         arguments=['0.0435', '5.258E-05', '0.11', '0.0', '0', '0', 'base_link', 'laser']
+    #     )
+    # else:
+    #     tf_base_link_to_laser = Node(
+    #         package='tf2_ros',
+    #         executable='static_transform_publisher',
+    #         arguments=['0.0435', '5.258E-05', '0.11', '3.14', '0', '0', 'base_link', 'laser']
+    #     )
 
     return LaunchDescription([
         robot_type_arg,
@@ -90,6 +101,6 @@ def generate_launch_description():
         lidar_a1_launch,
         lidar_s2_launch,
         lidar_4ROS_launch,
-        tf_base_link_to_laser
+        # tf_base_link_to_laser  # Removed - URDF handles static transforms
 
     ])

@@ -138,6 +138,7 @@ def generate_launch_description():
             'linear_scale_x': 1.0,
             'linear_scale_y': 1.0,
             'angular_scale': 1.0,
+            'base_footprint_frame': 'base_footprint',  # Use base_footprint for REP-105 compliance
         }]
     )
     
@@ -150,14 +151,14 @@ def generate_launch_description():
         'imu_filter_param.yaml'
     )
     
-    # IMU filter node - TEMPORARILY DISABLED for debugging
-    # imu_filter_node = Node(
-    #     package='imu_filter_madgwick',
-    #     executable='imu_filter_madgwick_node',
-    #     name='imu_filter',
-    #     output='screen',
-    #     parameters=[imu_filter_config]
-    # )
+    # IMU filter node - Re-enabled for SLAM integration
+    imu_filter_node = Node(
+        package='imu_filter_madgwick',
+        executable='imu_filter_madgwick_node',
+        name='imu_filter',
+        output='screen',
+        parameters=[imu_filter_config]
+    )
     
     # EKF for sensor fusion
     ekf_node = IncludeLaunchDescription(
@@ -169,21 +170,20 @@ def generate_launch_description():
     
     # === LIDAR ===
     
-    # S2 lidar node
+    # S2 lidar node - Configure to use laser_link frame to match URDF
     lidar_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             os.path.join(get_package_share_directory('sllidar_ros2'), 'launch'),
             '/sllidar_s2_launch.py'
-        ])
+        ]),
+        launch_arguments={
+            'frame_id': 'laser_link',  # Use laser_link to match URDF, eliminating need for static transform
+            'inverted': 'false'        # Keep false since laser is physically pointing forward
+        }.items()
     )
     
-    # Static transform from base_link to laser frame
-    laser_tf_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='base_to_laser_tf',
-        arguments=['0.0435', '0', '0.11', '3.14', '0', '0', 'base_link', 'laser']
-    )
+    # REMOVED: Conflicting static transform publisher - URDF should be the single source of truth
+    # The robot_state_publisher will handle all static transforms from URDF
     
     # === CONTROL ===
     
@@ -222,13 +222,12 @@ def generate_launch_description():
         driver_node,
         base_node,
         
-        # IMU and sensor fusion - IMU filter temporarily disabled
-        # imu_filter_node,
+        # IMU and sensor fusion
+        imu_filter_node,
         ekf_node,
         
         # Lidar
         lidar_node,
-        laser_tf_node,
         
         # Control
         yahboom_joy_node,

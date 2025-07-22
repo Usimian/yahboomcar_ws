@@ -14,7 +14,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, GroupAction, 
-                          IncludeLaunchDescription, SetEnvironmentVariable)
+                          IncludeLaunchDescription, SetEnvironmentVariable, TimerAction)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -73,6 +73,11 @@ def generate_launch_description():
         default_value='false',
         description='Use simulation (Gazebo) clock if true')
 
+    declare_pub_odom_tf_cmd = DeclareLaunchArgument(
+        'pub_odom_tf',
+        default_value='false',
+        description='Whether to publish odom->base_footprint transform')
+
     declare_params_file_cmd = DeclareLaunchArgument(
         'params_file',
         default_value=os.path.join(slam_nav_dir, 'config', 'nav2_params.yaml'),
@@ -115,20 +120,33 @@ def generate_launch_description():
 
     # Variables for robot bringup
     robot_use_rviz = PythonExpression(['"false"'])  # Disable RViz in robot bringup since we handle it here
+    pub_odom_tf = LaunchConfiguration('pub_odom_tf')
 
-    # Robot bringup
+    # === STARTUP SEQUENCING ===
+    # Critical: Start robot transforms BEFORE sensors and SLAM
+    
+    # 1. Robot bringup (base_node, robot_state_publisher, static transforms)
     robot_bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(slam_nav_dir, 'launch', 'robot_bringup.launch.py')),
-        launch_arguments={'use_rviz': robot_use_rviz}.items())
+            os.path.join(get_package_share_directory('slam_nav'), 'launch', 'robot_bringup.launch.py')),
+        launch_arguments={'use_sim_time': use_sim_time,
+                         'pub_odom_tf': pub_odom_tf}.items()
+    )
 
-    # SLAM Toolbox
-    slam_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py')),
-        launch_arguments={'slam_params_file': slam_params_file,
-                         'use_sim_time': use_sim_time}.items(),
-        condition=IfCondition(slam))
+    # 2. Add a delay before starting SLAM to ensure transforms are established
+    slam_delay_timer = TimerAction(
+        period=2.0,  # 2 second delay - enough for transforms but not too long
+        actions=[
+            # SLAM Toolbox - started after transforms are established
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py')),
+                launch_arguments={'slam_params_file': slam_params_file,
+                                'use_sim_time': use_sim_time}.items(),
+                condition=IfCondition(slam)
+            )
+        ]
+    )
 
     # Navigation launch
     navigation_launch_cmd = IncludeLaunchDescription(
@@ -162,6 +180,7 @@ def generate_launch_description():
         declare_slam_cmd,
         declare_map_yaml_cmd,
         declare_use_sim_time_cmd,
+        declare_pub_odom_tf_cmd,
         declare_params_file_cmd,
         declare_slam_params_file_cmd,
         declare_autostart_cmd,
@@ -173,7 +192,7 @@ def generate_launch_description():
 
         # Add the actions to launch all components
         robot_bringup_cmd,
-        slam_launch_cmd,
+        slam_delay_timer,
         navigation_launch_cmd,
         rviz_cmd
     ]) 
