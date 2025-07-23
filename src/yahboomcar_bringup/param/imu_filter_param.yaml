@@ -2,9 +2,11 @@ imu_filter:
   ros__parameters:
     gain_acc: 0.01  # Lower gain for more stable filtering
     gain_mag: 0.01
-    bias_alpha: 0.1
+    bias_alpha: 0.01  # Faster bias learning (was 0.1)
     do_bias_estimation: true  # Enable bias estimation for better accuracy
     do_adaptive_gain: true    # Enable adaptive gain for dynamic situations
+    stationary_bias_estimation: true  # Enable stationary bias estimation
+    bias_estimation_timeout: 5.0  # Time to estimate bias on startup
     use_mag: false            # Don't use magnetometer (can be noisy indoors)
     fixed_frame: "base_footprint"  # Use base_footprint to match EKF configuration
     publish_tf: false         # CRITICAL: EKF will handle transforms, not IMU filter

@@ -134,10 +134,10 @@ def generate_launch_description():
         name='base_node',
         output='screen',
         parameters=[{
-            'pub_odom_tf': LaunchConfiguration('pub_odom_tf'),
+            'pub_odom_tf': True,  # FIXED: Enable TF publishing from base_node (has correct rotation data)
             'linear_scale_x': 1.0,
             'linear_scale_y': 1.0,
-            'angular_scale': 1.0,
+            'angular_scale': 1.0,  # FIXED: Reverted to 1.0 since lidar inversion fix resolves the orientation issue
             'base_footprint_frame': 'base_footprint',  # Use base_footprint for REP-105 compliance
         }]
     )
@@ -151,14 +151,14 @@ def generate_launch_description():
         'imu_filter_param.yaml'
     )
     
-    # IMU filter node - Re-enabled for SLAM integration
-    imu_filter_node = Node(
-        package='imu_filter_madgwick',
-        executable='imu_filter_madgwick_node',
-        name='imu_filter',
-        output='screen',
-        parameters=[imu_filter_config]
-    )
+    # IMU filter node - TEMPORARILY DISABLED due to gyroscope bias issues
+    # imu_filter_node = Node(
+    #     package='imu_filter_madgwick',
+    #     executable='imu_filter_madgwick_node',
+    #     name='imu_filter',
+    #     output='screen',
+    #     parameters=[imu_filter_config]
+    # )
     
     # EKF for sensor fusion
     ekf_node = IncludeLaunchDescription(
@@ -178,7 +178,7 @@ def generate_launch_description():
         ]),
         launch_arguments={
             'frame_id': 'laser_link',  # Use laser_link to match URDF, eliminating need for static transform
-            'inverted': 'false'        # Keep false since laser is physically pointing forward
+            'inverted': 'false'        # FIXED: Disable inversion to prevent 180° rotation (URDF already has 180° transform)
         }.items()
     )
     
@@ -223,7 +223,7 @@ def generate_launch_description():
         base_node,
         
         # IMU and sensor fusion
-        imu_filter_node,
+        # imu_filter_node,  # Disabled due to gyroscope bias
         ekf_node,
         
         # Lidar

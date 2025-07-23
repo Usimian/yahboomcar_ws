@@ -13,76 +13,73 @@ slam_toolbox:
     map_frame: map
     base_frame: base_footprint  # Use base_footprint to match EKF and maintain REP-105 compliance
     scan_topic: /scan
-    odom_topic: /odom  # Use EKF-fused odometry (encoders + IMU)
-    use_map_saver: true
+    odom_topic: /odom_raw  # FIXED: Use raw odometry with working rotational data instead of broken EKF odom
+    use_map_saver: false  # Disable map saving to prevent persistence
     mode: mapping # localization
 
     # if you'd like to immediately start continuing a map at a given pose
     # or at the dock, but they are mutually exclusive, if pose is given
     # will use pose
     #map_file_name: test_steve
-    map_start_pose: [0.0, 0.0, 0.0]  # Enable initial pose to establish map frame immediately
+    #map_start_pose: [0.0, 0.0, 0.0]  # Disabled - start with completely fresh map
     #map_start_at_dock: true
 
     debug_logging: false  # Disable debug logging to reduce message spam
-    throttle_scans: 2  # Process every 2nd scan instead of every scan to reduce CPU load
-    transform_publish_period: 0.05  # Reduce transform frequency to lower CPU usage (was 0.02)
-    map_update_interval: 1.0  # Reduce map update frequency (was 0.5)
-    resolution: 0.05  # Restore finer resolution but still reasonable (was 0.1)
-    max_laser_range: 8.0  # Match S2 lidar max range specification
-    min_laser_range: 0.05  # Lower minimum range for better close obstacle detection
-    minimum_time_interval: 0.05  # Reduce minimum time interval for faster updates
-    transform_timeout: 20.0  # Reasonable timeout for transform lookups
-    tf_buffer_duration: 240.0  # 4-minute buffer for transform history
-    stack_size_to_use: 40000000 #// program needs a larger stack size to serialize large maps
+    throttle_scans: 1  # Process every scan for better real-time mapping
+    transform_publish_period: 0.02  # 50Hz transform updates for smooth operation
+    map_update_interval: 0.2  # 5Hz map updates - balanced performance
+    resolution: 0.05  # 5cm resolution for detailed mapping
+    
+    # FIXED: Consistent laser range settings for S2 lidar (actual max ~18m, use 12m for reliability)
+    max_laser_range: 12.0  # Conservative setting for S2 lidar reliability
+    min_laser_range: 0.05  # S2 lidar minimum range
+    
+    minimum_time_interval: 0.02  # FIXED: Reduced to 20ms for real-time mapping updates
+    transform_timeout: 0.2  # FIXED: Shorter timeout to prevent extrapolation issues
+    tf_buffer_duration: 10.0  # FIXED: Shorter buffer to prevent timing issues
+    stack_size_to_use: 40000000 # program needs a larger stack size to serialize large maps
     enable_interactive_mode: true
 
-    # Message filter queue parameters - Conservative settings for stability
-    scan_queue_size: 100  # Restore larger queue size for stability
-    odom_queue_size: 100  # Restore larger queue size for stability  
-    tf_timeout: 20.0      # Restore longer timeout for stability
-    
-    # TIMING SYNCHRONIZATION - Conservative message filtering for stability
+    # SIMPLIFIED: Message filter queue parameters for stability
     use_message_filter: true  # Enable proper message synchronization
+    scan_queue_size: 10  # REDUCED: Smaller queue to minimize latency
+    odom_queue_size: 10  # REDUCED: Smaller queue to minimize latency  
+    tf_timeout: 0.1      # REDUCED: Very short timeout for real-time performance
+    
+    # SCAN MATCHING - Optimized for S2 lidar characteristics
     use_scan_matching: true
     use_scan_barycenter: true
-    correlation_search_space_dimension: 0.5
-    correlation_search_space_resolution: 0.01
-    correlation_search_space_smear_deviation: 0.1
+    minimum_travel_distance: 0.0    # FIXED: Set to 0 to allow rotation-only map updates
+    minimum_travel_heading: 0.02    # FIXED: Reduced to ~1 degree for responsive rotation mapping
+    scan_buffer_size: 10           # Moderate buffer for efficiency
+    scan_buffer_maximum_scan_distance: 10.0  # Maximum distance for scan buffer
     
-    # Enhanced scan matching for rotation sensitivity
-    do_loop_closing: true
-    loop_search_maximum_distance: 3.0
-    loop_search_space_dimension: 0.05
+    # SCAN MATCHING THRESHOLDS - Balanced for reliability
+    link_match_minimum_response_fine: 0.1     # Balanced fine matching threshold
+    link_scan_maximum_distance: 1.5          # Allow reasonable linking distance
+    
+    # LOOP CLOSURE - Conservative settings for stability
+    do_loop_closing: true                     # Enable loop closure
+    loop_search_maximum_distance: 3.0        # Conservative search distance
+    loop_match_minimum_chain_size: 10        # Standard chain size
+    loop_match_maximum_variance_coarse: 3.0   # Coarse matching variance
+    loop_match_minimum_response_coarse: 0.35  # Coarse matching threshold
+    loop_match_minimum_response_fine: 0.45    # Fine matching threshold
+
+    # CORRELATION SEARCH - Optimized for map consistency
+    correlation_search_space_dimension: 0.5  # Search space for correlation
+    correlation_search_space_resolution: 0.01  # Fine resolution for accuracy
+    correlation_search_space_smear_deviation: 0.1  # Smearing for robustness
+    
+    # FINE-TUNING SCAN MATCHING - Standard parameters
+    fine_search_angle_offset: 0.00349  # ~0.2 degrees in radians
+    coarse_search_angle_offset: 0.349  # ~20 degrees in radians  
+    coarse_angle_resolution: 0.0349    # ~2 degrees in radians
+    minimum_angle_penalty: 0.9         # Penalty for angle deviations
+    minimum_distance_penalty: 0.5      # Penalty for distance deviations
     use_response_expansion: true
     
-    # CRITICAL: More aggressive timing tolerance settings
-    minimum_travel_distance: 0.02  # Reduce to 2cm for very sensitive translation updates
-    minimum_travel_heading: 0.05   # Reduce to ~2.9 degrees for very sensitive rotation updates 
-    map_start_at_dock: false
-    
-    # Transform chain timeout settings
-    tf_tolerance: 5.0  # Allow more tolerance for timing mismatches
-    max_laser_range_squared: 64.0  # 8.0^2
-    
-    # Loop closure parameters for better mapping - REDUCED for CPU performance
-    loop_search_maximum_distance: 2.0  # Reduced from 3.0 to limit search area
-    do_loop_closing: true
-    loop_match_minimum_chain_size: 15   # Increased from 10 to be more selective
-    loop_match_maximum_variance_coarse: 2.0  # Reduced from 3.0 to be more selective
-    loop_match_minimum_response_coarse: 0.45  # Increased from 0.35 to be more selective
-    loop_match_maximum_variance_fine: 0.03   # Reduced from 0.05 to be more selective
-    loop_match_minimum_response_fine: 0.55   # Increased from 0.45 to be more selective
-
-    # Correlation search parameters
-    correlation_search_space_dimension: 0.5
-    correlation_search_space_resolution: 0.01
-    correlation_search_space_smear_deviation: 0.1
-    
-    # Fine resolution correlation search  
-    fine_search_angle_offset: 0.00349  # ~0.2 degrees
-    coarse_search_angle_offset: 0.349   # ~20 degrees
-    coarse_angle_resolution: 0.0349     # ~2 degrees
-    minimum_angle_penalty: 0.9
-    minimum_distance_penalty: 0.5
-    use_response_expansion: true 
+    # MOTION MODEL - For real-time performance
+    angular_search_window: 0.349  # ~20 degrees search window
+    linear_search_window: 0.3     # 30cm search window
+    map_with_known_poses: false   # Don't assume known poses for autonomous mapping

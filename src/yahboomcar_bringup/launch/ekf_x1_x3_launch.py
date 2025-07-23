@@ -34,15 +34,15 @@ def generate_launch_description():
             'debug_out_file': '/path/to/debug/file.txt',
             'permit_corrected_publication': False,
             'publish_acceleration': False,
-            'publish_tf': True,
+            'publish_tf': False,  # FIXED: Disable TF publishing from EKF (has broken rotation data)
             'map_frame': 'map',
             
-            # Odometry configuration - wheel encoders
+            # Odometry configuration - wheel encoders (including angular velocity)
             'odom0': 'odom_raw',
             'odom0_config': [False, False, False,
-                           False, False, True,
-                           True,  True,  True,
-                           False, False, True,
+                           False, False, True,   # Use yaw pose from odometry
+                           True,  True,  True,   # Use linear velocities
+                           False, False, True,   # Use yaw angular velocity from odometry
                            False, False, False],
             'odom0_queue_size': 20,  # Increase queue size for better buffering
             'odom0_nodelay': False,
@@ -51,13 +51,13 @@ def generate_launch_description():
             'odom0_pose_rejection_threshold': 5.0,
             'odom0_twist_rejection_threshold': 1.0,
             
-            # IMU configuration - CRITICAL FIX: Remove IMU transform publishing
+            # IMU configuration - Using raw IMU data due to filter bias issues
             # The IMU data will be used for orientation but transforms come from URDF
-            'imu0': 'imu/data',
+            'imu0': 'imu/data_raw',
             'imu0_config': [False, False, False,
                            False, False, True,   # Use yaw orientation only
                            False, False, False,
-                           False, False, True,   # Use yaw angular velocity
+                           False, False, False,  # DISABLE yaw angular velocity (too much bias)
                            False, False, False], # Do NOT use accelerations to prevent drift
             'imu0_nodelay': False,
             'imu0_differential': False,

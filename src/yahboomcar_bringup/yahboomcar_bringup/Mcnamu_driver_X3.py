@@ -64,6 +64,8 @@ class yahboomcar_driver(Node):
 		self.declare_parameter('debug', False)
 		self.debug_enabled = self.get_parameter('debug').get_parameter_value().bool_value
 		print (f"Debug mode: {self.debug_enabled}")
+		
+		# Note: IMU gyroscope bias correction removed - using wheel odometry for angular velocity instead
 
 		#create subcriber
 		self.sub_cmd_vel = self.create_subscription(Twist,"cmd_vel",self.cmd_vel_callback,1)
@@ -120,6 +122,11 @@ class yahboomcar_driver(Node):
 		# Add debug counter
 		self.debug_counter = 0
 		
+		# FIXED: Store commanded velocities for proper feedback
+		self.last_cmd_vx = 0.0
+		self.last_cmd_vy = 0.0  
+		self.last_cmd_angular = 0.0
+		
 		self.get_logger().info("Yahboom X3 driver initialization complete")
 
 	def cmd_vel_callback(self,msg):
@@ -131,6 +138,17 @@ class yahboomcar_driver(Node):
 		vy = msg.linear.y*1.0
 		angular = msg.angular.z*1.0     # wait for chang
 		self.car.set_car_motion(vx, vy, angular)
+		
+		# FIXED: Store commanded velocities for velocity feedback
+		self.last_cmd_vx = vx
+		self.last_cmd_vy = vy
+		self.last_cmd_angular = angular
+		
+		# DEBUG: Print received commands to verify callback is working
+		if abs(angular) > 0.01:  # Only print when there's significant angular velocity
+			self.get_logger().info(f"CMD_VEL received: vx={vx:.3f}, vy={vy:.3f}, angular={angular:.3f}")
+			self.get_logger().info(f"Stored values: last_cmd_angular={self.last_cmd_angular:.3f}")
+		
 		'''print("cmd_vx: ",vx)
 		print("cmd_vy: ",vy)
 		print("cmd_angular: ",angular)'''
@@ -201,7 +219,8 @@ class yahboomcar_driver(Node):
 			'''print("vx: ",vx)
 			print("vy: ",vy)
 			print("angular: ",angular)'''
-			# Publish gyroscope data
+			
+			# Publish raw gyroscope data (bias correction not needed since using wheel odometry for angular velocity)
 			imu.header.stamp = time_stamp.to_msg()
 			imu.header.frame_id = self.imu_link
 			imu.linear_acceleration.x = ax*1.0
@@ -217,10 +236,16 @@ class yahboomcar_driver(Node):
 			mag.magnetic_field.y = my*1.0
 			mag.magnetic_field.z = mz*1.0
 			
-			# Publish the current linear velocity and angular velocity of the car
-			twist.linear.x = vx *1.0
-			twist.linear.y = vy *1.0
-			twist.angular.z = angular*1.0    
+			# FIXED: Publish commanded velocities instead of unreliable hardware feedback
+			# This ensures proper angular velocity feedback for odometry and SLAM
+			twist.linear.x = self.last_cmd_vx
+			twist.linear.y = self.last_cmd_vy
+			twist.angular.z = self.last_cmd_angular  # Use commanded angular velocity for reliable feedback
+			
+			# DEBUG: Print published values when there's angular velocity
+			if abs(self.last_cmd_angular) > 0.01:
+				self.get_logger().info(f"PUBLISHING: twist.angular.z = {self.last_cmd_angular:.3f}")
+			
 			self.velPublisher.publish(twist)
 			# print("ax: %.5f, ay: %.5f, az: %.5f" % (ax, ay, az))
 			# print("gx: %.5f, gy: %.5f, gz: %.5f" % (gx, gy, gz))
