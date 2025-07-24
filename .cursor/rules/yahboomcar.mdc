@@ -11,5 +11,6 @@ There are two other workspaces that have relevent context:
     ~/yahboomcar_ros2/library_ws - contains the lidar and Astra Pro Plus camera packages
 All test files should start with test_
 Build ROS2 packages without --symlink-install
+Always check the terminal output for errors.
 Important - The robot is a Jetson Orin Nano connected via ssh to a Ubuntu 22 PC.
      Rviz2 is running on the robot and viewed using nomachine on the PC.

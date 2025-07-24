@@ -144,17 +144,6 @@ class yahboomcar_driver(Node):
 		self.last_cmd_vy = vy
 		self.last_cmd_angular = angular
 		
-		# DEBUG: Print received commands to verify callback is working
-		if abs(angular) > 0.01:  # Only print when there's significant angular velocity
-			self.get_logger().info(f"CMD_VEL received: vx={vx:.3f}, vy={vy:.3f}, angular={angular:.3f}")
-			self.get_logger().info(f"Stored values: last_cmd_angular={self.last_cmd_angular:.3f}")
-		
-		'''print("cmd_vx: ",vx)
-		print("cmd_vy: ",vy)
-		print("cmd_angular: ",angular)'''
-        #rospy.loginfo("nav_use_rot:{}".format(self.nav_use_rotvel))
-        #print(self.nav_use_rotvel)
-
 	def RGBLightcallback(self,msg):
         # RGB Light control, server callback function
 		if not isinstance(msg, Int32): return
@@ -216,10 +205,6 @@ class yahboomcar_driver(Node):
 				mx = my = mz = 0.0
 				vx = vy = angular = 0.0
 			
-			'''print("vx: ",vx)
-			print("vy: ",vy)
-			print("angular: ",angular)'''
-			
 			# Publish raw gyroscope data (bias correction not needed since using wheel odometry for angular velocity)
 			imu.header.stamp = time_stamp.to_msg()
 			imu.header.frame_id = self.imu_link
@@ -241,10 +226,6 @@ class yahboomcar_driver(Node):
 			twist.linear.x = self.last_cmd_vx
 			twist.linear.y = self.last_cmd_vy
 			twist.angular.z = self.last_cmd_angular  # Use commanded angular velocity for reliable feedback
-			
-			# DEBUG: Print published values when there's angular velocity
-			if abs(self.last_cmd_angular) > 0.01:
-				self.get_logger().info(f"PUBLISHING: twist.angular.z = {self.last_cmd_angular:.3f}")
 			
 			self.velPublisher.publish(twist)
 			# print("ax: %.5f, ay: %.5f, az: %.5f" % (ax, ay, az))

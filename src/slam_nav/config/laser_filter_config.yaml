@@ -1,0 +1,8 @@
+laser_filter:
+  ros__parameters:
+    filter1:
+      name: angular_bounds_filter
+      type: laser_filters/LaserScanAngularBoundsFilter
+      params:
+        lower_angle: -2.4434609527920614  # -140 degrees in radians for 280° total range
+        upper_angle: 2.4434609527920614   # +140 degrees in radians for 280° total range 

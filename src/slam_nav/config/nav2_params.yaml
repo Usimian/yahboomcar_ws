@@ -152,7 +152,7 @@ local_costmap:
       rolling_window: true
       width: 3
       height: 3
-      resolution: 0.05
+      resolution: 0.02
       robot_radius: 0.15
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
@@ -201,7 +201,7 @@ global_costmap:
       robot_base_frame: base_footprint
       use_sim_time: False
       robot_radius: 0.15
-      resolution: 0.05
+      resolution: 0.02
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:

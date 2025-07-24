@@ -16,9 +16,9 @@ auto_navigator:
     localization_frequency: 20.0     # Localization update frequency (Hz)
     
     # Mapping parameters
-    map_resolution: 0.05             # Map resolution (m/cell)
-    map_width: 400                   # Map width (cells) - 20m at 0.05m resolution
-    map_height: 400                  # Map height (cells) - 20m at 0.05m resolution
+    map_resolution: 0.02             # Map resolution (m/cell)
+    map_width: 400                   # Map width (cells) - 8m at 0.02m resolution
+    map_height: 400                  # Map height (cells) - 8m at 0.02m resolution
     map_origin_x: -10.0              # Map origin X (m)
     map_origin_y: -10.0              # Map origin Y (m)
     map_decay_time: 10.0             # Time (s) before map data starts to decay

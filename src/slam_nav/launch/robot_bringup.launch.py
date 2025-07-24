@@ -170,21 +170,23 @@ def generate_launch_description():
     
     # === LIDAR ===
     
-    # S2 lidar node - Configure to use laser_link frame to match URDF
-    lidar_node = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            os.path.join(get_package_share_directory('sllidar_ros2'), 'launch'),
-            '/sllidar_s2_launch.py'
-        ]),
-        launch_arguments={
-            'frame_id': 'laser_link',  # Use laser_link to match URDF, eliminating need for static transform
-            'inverted': 'false'        # FIXED: Disable inversion to prevent 180° rotation (URDF already has 180° transform)
-        }.items()
+    # S2 lidar node - Simple configuration to get full 360° data
+    lidar_node = Node(
+        package='sllidar_ros2',
+        executable='sllidar_node',
+        name='sllidar_node',
+        output='screen',
+        parameters=[{
+            'channel_type': 'serial',
+            'serial_port': '/dev/rplidar',
+            'serial_baudrate': 1000000,
+            'frame_id': 'laser_link',
+            'inverted': False,
+            'angle_compensate': True,
+            'scan_mode': 'Standard'      # Try Standard mode instead of DenseBoost
+        }]
     )
-    
-    # REMOVED: Conflicting static transform publisher - URDF should be the single source of truth
-    # The robot_state_publisher will handle all static transforms from URDF
-    
+
     # === CONTROL ===
     
     # Joystick control node
