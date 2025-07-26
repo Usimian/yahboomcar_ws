@@ -29,10 +29,13 @@ def generate_launch_description():
         os.environ["PRINTED_SLAM_NAV"] = "1"
         print("---------------------SLAM NAV: X3 with S2 lidar---------------------")
     
+    # Launch configuration variables
+    pub_odom_tf = LaunchConfiguration('pub_odom_tf')
+    
     # Get package paths
     urdf_tutorial_path = get_package_share_path('yahboomcar_description')
     default_model_path = urdf_tutorial_path / 'urdf/yahboomcar_X3_simple.urdf'
-    default_rviz_config_path = urdf_tutorial_path / 'rviz/yahboomcar.rviz'
+
     
     # Launch arguments
     gui_arg = DeclareLaunchArgument(
@@ -48,11 +51,7 @@ def generate_launch_description():
         description='Absolute path to robot urdf file'
     )
     
-    rviz_arg = DeclareLaunchArgument(
-        name='rvizconfig', 
-        default_value=str(default_rviz_config_path),
-        description='Absolute path to rviz config file'
-    )
+    
     
     pub_odom_tf_arg = DeclareLaunchArgument(
         'pub_odom_tf', 
@@ -60,11 +59,7 @@ def generate_launch_description():
         description='Whether to publish the tf from the original odom to the base_footprint'
     )
     
-    use_rviz_arg = DeclareLaunchArgument(
-        'use_rviz', 
-        default_value='false',
-        description='Whether to start RViz'
-    )
+    
     
     # Robot description
     robot_description = ParameterValue(
@@ -99,15 +94,7 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('gui'))
     )
     
-    # RViz (optional)
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        output='screen',
-        arguments=['-d', LaunchConfiguration('rvizconfig')],
-        condition=IfCondition(LaunchConfiguration('use_rviz'))
-    )
+
     
     # === HARDWARE DRIVERS ===
     
@@ -134,7 +121,7 @@ def generate_launch_description():
         name='base_node',
         output='screen',
         parameters=[{
-            'pub_odom_tf': True,  # FIXED: Enable TF publishing from base_node (has correct rotation data)
+            'pub_odom_tf': pub_odom_tf,  # Use LaunchConfiguration parameter 
             'linear_scale_x': 1.0,
             'linear_scale_y': 1.0,
             'angular_scale': 1.0,  # FIXED: Reverted to 1.0 since lidar inversion fix resolves the orientation issue
@@ -210,15 +197,12 @@ def generate_launch_description():
         # Launch arguments
         gui_arg,
         model_arg,
-        rviz_arg,
         pub_odom_tf_arg,
-        use_rviz_arg,
         
         # Robot description and visualization
         robot_state_publisher_node,
         joint_state_publisher_node,
         joint_state_publisher_gui_node,
-        rviz_node,
         
         # Hardware drivers
         driver_node,

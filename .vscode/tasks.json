@@ -1,0 +1,140 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "colcon",
+            "args": [
+                "build",
+                "--packages-up-to",
+                "${input:packageName}",
+                "--cmake-args",
+                "-DCMAKE_BUILD_TYPE=Release"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Build a single ROS 2 package with its dependencies"
+        },
+        {
+            "label": "build all",
+            "type": "shell",
+            "command": "colcon",
+            "args": [
+                "build",
+                "--cmake-args",
+                "-DCMAKE_BUILD_TYPE=Release"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Build entire ROS 2 workspace (handles dependencies automatically)"
+        },
+        {
+            "label": "clean and build",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "rm -rf build/${input:packageName} install/${input:packageName} log/build_${input:packageName}* && colcon build --packages-up-to ${input:packageName} --cmake-args -DCMAKE_BUILD_TYPE=Release"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Clean and build a single ROS 2 package with its dependencies"
+        },
+        {
+            "label": "clean and build all",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "rm -rf build install log && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Clean and build entire ROS 2 workspace (handles dependencies automatically)"
+        },
+        {
+            "label": "launch slam_nav",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav slam_nav.launch.py"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "detail": "Launch SLAM navigation system without RViz (headless mode)"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "packageName",
+            "description": "Package name to build",
+            "type": "pickString",
+            "options": [
+                "auto_drive",
+                "laserscan_to_point_publisher",
+                "robot_pose_publisher_ros2",
+                "yahboom_app_save_map",
+                "slam_nav",
+                "yahboomcar_astra",
+                "yahboomcar_base_node",
+                "yahboomcar_bringup",
+                "yahboomcar_ctrl",
+                "yahboomcar_description",
+                "yahboomcar_description_x1",
+                "yahboomcar_KCFTracker",
+                "yahboomcar_laser",
+                "yahboomcar_linefollow",
+                "yahboomcar_mediapipe",
+                "yahboomcar_msgs",
+                "yahboomcar_multi",
+                "yahboomcar_nav",
+                "yahboomcar_point",
+                "yahboomcar_rviz",
+                "yahboomcar_slam",
+                "yahboomcar_visual",
+                "yahboomcar_voice_ctrl",
+                "yahboom_web_savmap_interfaces"
+            ]
+        }
+    ]
+} 

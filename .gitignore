@@ -10,7 +10,6 @@ log/
 *#
 
 # IDE and Editor files
-.vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace

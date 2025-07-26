@@ -7,7 +7,7 @@ Brings up:
 - Complete robot system (robot_bringup.launch.py)
 - SLAM Toolbox for persistent mapping
 - Nav2 navigation stack
-- RViz for visualization
+
 """
 
 import os
@@ -17,7 +17,7 @@ from launch.actions import (DeclareLaunchArgument, GroupAction,
                           IncludeLaunchDescription, SetEnvironmentVariable, TimerAction)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
 from nav2_common.launch import RewrittenYaml
@@ -40,8 +40,7 @@ def generate_launch_description():
     use_composition = LaunchConfiguration('use_composition')
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
-    use_rviz = LaunchConfiguration('use_rviz')
-    rviz_config_file = LaunchConfiguration('rviz_config_file')
+
 
     # Set environment variables
     stdout_linebuf_envvar = SetEnvironmentVariable(
@@ -108,18 +107,9 @@ def generate_launch_description():
         default_value='info',
         description='log level')
 
-    declare_use_rviz_cmd = DeclareLaunchArgument(
-        'use_rviz',
-        default_value='true',
-        description='Whether to start RVIZ')
-
-    declare_rviz_config_file_cmd = DeclareLaunchArgument(
-        'rviz_config_file',
-        default_value=os.path.join(slam_nav_dir, 'rviz', 'slam_nav.rviz'),
-        description='Full path to the RVIZ config file to use')
 
     # Variables for robot bringup
-    robot_use_rviz = PythonExpression(['"false"'])  # Disable RViz in robot bringup since we handle it here
+
     pub_odom_tf = LaunchConfiguration('pub_odom_tf')
 
     # === STARTUP SEQUENCING ===
@@ -147,22 +137,14 @@ def generate_launch_description():
     navigation_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(nav2_bringup_dir, 'launch', 'navigation_launch.py')),
-        launch_arguments={'namespace': namespace,
-                         'use_sim_time': use_sim_time,
+        launch_arguments={'use_sim_time': use_sim_time,
                          'autostart': autostart,
                          'params_file': params_file,
                          'use_composition': use_composition,
                          'use_respawn': use_respawn,
                          'container_name': 'nav2_container'}.items())
 
-    # RViz
-    rviz_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(nav2_bringup_dir, 'launch', 'rviz_launch.py')),
-        launch_arguments={'namespace': namespace,
-                         'use_namespace': use_namespace,
-                         'rviz_config': rviz_config_file}.items(),
-        condition=IfCondition(use_rviz))
+
 
     # Return launch description directly
     return LaunchDescription([
@@ -182,12 +164,9 @@ def generate_launch_description():
         declare_use_composition_cmd,
         declare_use_respawn_cmd,
         declare_log_level_cmd,
-        declare_use_rviz_cmd,
-        declare_rviz_config_file_cmd,
 
         # Add the actions to launch all components
         robot_bringup_cmd,
         slam_launch_cmd,
-        navigation_launch_cmd,
-        rviz_cmd
+        navigation_launch_cmd
     ]) 
