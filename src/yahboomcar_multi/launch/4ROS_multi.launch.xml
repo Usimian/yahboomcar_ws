@@ -21,7 +21,7 @@
             <param name="angle_max" value="180.0"/>
             <param name="angle_min" value="-180.0"/>
             <param name="range_max" value="64.0"/>
-            <param name="range_min" value="0.01"/>
+            <param name="range_min" value="0.05001"/>
             <param name="frequency" value="10.0"/>
             <param name="invalid_range_is_inf" value="false"/>
         </node>

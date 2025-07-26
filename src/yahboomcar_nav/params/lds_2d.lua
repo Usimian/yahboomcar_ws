@@ -30,7 +30,7 @@ options = {
 
 MAP_BUILDER.use_trajectory_builder_2d = true
 
-TRAJECTORY_BUILDER_2D.min_range = 0.1
+TRAJECTORY_BUILDER_2D.min_range = 0.05001
 TRAJECTORY_BUILDER_2D.max_range = 8
 TRAJECTORY_BUILDER_2D.missing_data_ray_length = 0.5
 TRAJECTORY_BUILDER_2D.use_imu_data = false 
