@@ -89,8 +89,8 @@ Key parameters optimized for yahboomcar X3:
 ```yaml
 # Robot physical constraints
 robot_radius: 0.15                    # Robot's radius in meters
-max_vel_x: 0.5                       # Maximum linear velocity
-max_vel_theta: 1.0                   # Maximum angular velocity
+max_vel_x: 0.2                       # Maximum linear velocity
+max_vel_theta: 0.5                   # Maximum angular velocity
 acc_lim_x: 2.5                       # Linear acceleration limit
 acc_lim_theta: 3.2                   # Angular acceleration limit
 

@@ -15,6 +15,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, GroupAction, 
                           IncludeLaunchDescription, SetEnvironmentVariable, TimerAction)
+from launch_ros.actions import ComposableNodeContainer, LoadComposableNodes
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -133,20 +134,51 @@ def generate_launch_description():
         condition=IfCondition(slam)
     )
 
-    # Navigation launch
+    # Create Nav2 container first for proper composition
+    nav2_container = ComposableNodeContainer(
+        name='nav2_container',
+        namespace='',
+        package='rclcpp_components',
+        executable='component_container',
+        composable_node_descriptions=[],
+        output='screen'
+    )
+
+    # Navigation launch - use composition with fallback option
     navigation_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(nav2_bringup_dir, 'launch', 'navigation_launch.py')),
         launch_arguments={'use_sim_time': use_sim_time,
                          'autostart': autostart,
                          'params_file': params_file,
-                         'use_composition': use_composition,
-                         'use_respawn': use_respawn,
+                         'use_composition': 'False',  # Temporarily disable for stability
+                         'use_respawn': 'True',  # Enable respawn for crash recovery
                          'container_name': 'nav2_container'}.items())
 
 
 
-    # Return launch description directly
+    # Implement proper startup sequencing as recommended for SLAM + Nav2:
+    # 1. Robot platform first (immediate)
+    # 2. Nav2 stack second (with delay)  
+    # 3. SLAM Toolbox third (with longer delay)
+    
+    # Group Nav2 launch with delayed start (shorter delay since container is pre-created)
+    delayed_navigation_group = GroupAction([
+        TimerAction(
+            period=3.0,  # Reduced to 3 seconds since container exists
+            actions=[navigation_launch_cmd]
+        )
+    ])
+    
+    # Group SLAM launch with delayed start  
+    delayed_slam_group = GroupAction([
+        TimerAction(
+            period=8.0,  # 8 second delay (reduced since Nav2 starts at 3s)
+            actions=[slam_launch_cmd]
+        )
+    ])
+
+    # Return launch description with proper sequencing
     return LaunchDescription([
         # Set environment variables
         stdout_linebuf_envvar,
@@ -165,8 +197,12 @@ def generate_launch_description():
         declare_use_respawn_cmd,
         declare_log_level_cmd,
 
-        # Add the actions to launch all components
+        # Launch components in recommended sequence:
+        # 1. Robot platform + Nav2 container (immediate)
         robot_bringup_cmd,
-        slam_launch_cmd,
-        navigation_launch_cmd
+        nav2_container,
+        # 2. Nav2 stack (3s delay - container ready)
+        delayed_navigation_group,
+        # 3. SLAM Toolbox (8s delay) 
+        delayed_slam_group
     ]) 
