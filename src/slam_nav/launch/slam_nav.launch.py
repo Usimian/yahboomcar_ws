@@ -41,6 +41,11 @@ def generate_launch_description():
     use_composition = LaunchConfiguration('use_composition')
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
+    
+    # Initial pose parameters
+    initial_pose_x = LaunchConfiguration('initial_pose_x')
+    initial_pose_y = LaunchConfiguration('initial_pose_y')
+    initial_pose_yaw = LaunchConfiguration('initial_pose_yaw')
 
 
     # Set environment variables
@@ -107,6 +112,22 @@ def generate_launch_description():
         'log_level', 
         default_value='info',
         description='log level')
+
+    # Initial pose arguments
+    declare_initial_pose_x_cmd = DeclareLaunchArgument(
+        'initial_pose_x',
+        default_value='0.0',
+        description='Initial pose X coordinate')
+
+    declare_initial_pose_y_cmd = DeclareLaunchArgument(
+        'initial_pose_y', 
+        default_value='0.0',
+        description='Initial pose Y coordinate')
+
+    declare_initial_pose_yaw_cmd = DeclareLaunchArgument(
+        'initial_pose_yaw',
+        default_value='0.0', 
+        description='Initial pose yaw angle (radians)')
 
 
     # Variables for robot bringup
@@ -178,6 +199,25 @@ def generate_launch_description():
         )
     ])
 
+    # Initial pose publisher node - starts after SLAM is ready
+    initial_pose_publisher = Node(
+        package='slam_nav',
+        executable='initial_pose_publisher',
+        name='initial_pose_publisher',
+        parameters=[{
+            'initial_pose_x': initial_pose_x,
+            'initial_pose_y': initial_pose_y, 
+            'initial_pose_yaw': initial_pose_yaw,
+        }],
+        output='screen'
+    )
+
+    # Delayed initial pose publication
+    delayed_initial_pose = TimerAction(
+        period=12.0,  # After SLAM is fully started
+        actions=[initial_pose_publisher]
+    )
+
     # Return launch description with proper sequencing
     return LaunchDescription([
         # Set environment variables
@@ -196,6 +236,9 @@ def generate_launch_description():
         declare_use_composition_cmd,
         declare_use_respawn_cmd,
         declare_log_level_cmd,
+        declare_initial_pose_x_cmd,
+        declare_initial_pose_y_cmd,
+        declare_initial_pose_yaw_cmd,
 
         # Launch components in recommended sequence:
         # 1. Robot platform + Nav2 container (immediate)
@@ -204,5 +247,7 @@ def generate_launch_description():
         # 2. Nav2 stack (3s delay - container ready)
         delayed_navigation_group,
         # 3. SLAM Toolbox (8s delay) 
-        delayed_slam_group
+        delayed_slam_group,
+        # 4. Initial pose publisher (temporarily disabled for debugging)
+        # delayed_initial_pose
     ]) 

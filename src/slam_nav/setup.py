@@ -29,6 +29,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'initial_pose_publisher = scripts.initial_pose_publisher:main',
+            'velocity_monitor = scripts.velocity_monitor:main',
         ],
     },
 )

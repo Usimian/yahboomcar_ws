@@ -1,0 +1,16 @@
+digraph G {
+"base_link" -> "back_left_wheel"[label=" Broadcaster: default_authority\nAverage rate: 10.201\nBuffer length: 5.097\nMost recent transform: 1753641591.828388\nOldest transform: 1753641586.731027\n"];
+"base_footprint" -> "base_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"base_link" -> "back_right_wheel"[label=" Broadcaster: default_authority\nAverage rate: 10.201\nBuffer length: 5.097\nMost recent transform: 1753641591.828388\nOldest transform: 1753641586.731027\n"];
+"base_link" -> "front_left_wheel"[label=" Broadcaster: default_authority\nAverage rate: 10.201\nBuffer length: 5.097\nMost recent transform: 1753641591.828388\nOldest transform: 1753641586.731027\n"];
+"base_link" -> "front_right_wheel"[label=" Broadcaster: default_authority\nAverage rate: 10.201\nBuffer length: 5.097\nMost recent transform: 1753641591.828388\nOldest transform: 1753641586.731027\n"];
+"base_link" -> "imu_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"odom" -> "base_footprint"[label=" Broadcaster: default_authority\nAverage rate: 10.185\nBuffer length: 5.106\nMost recent transform: 1753641591.854588\nOldest transform: 1753641586.749065\n"];
+"base_link" -> "camera_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"base_link" -> "laser_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"map" -> "odom"[label=" Broadcaster: default_authority\nAverage rate: 0.5\nBuffer length: 5.995\nMost recent transform: 1753641590.601614\nOldest transform: 1753641584.606402\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1753641591.9559696"[ shape=plaintext ] ;
+}->"map";
+}
