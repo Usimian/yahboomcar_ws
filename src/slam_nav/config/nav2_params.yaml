@@ -184,7 +184,7 @@ local_costmap:
           obstacle_max_range: 2.2     # Reduced from 2.5 to be less conservative about distant obstacles
           obstacle_min_range: 0.05001
         camera:
-          topic: /camera/points
+          topic: /camera/depth/points
           max_obstacle_height: 1.5
           min_obstacle_height: 0.05
           clearing: True
@@ -240,7 +240,7 @@ global_costmap:
           obstacle_max_range: 2.2     # Reduced from 2.5 to be less conservative about distant obstacles
           obstacle_min_range: 0.05001
         camera:
-          topic: /camera/points
+          topic: /camera/depth/points
           max_obstacle_height: 1.5
           min_obstacle_height: 0.05
           clearing: True
