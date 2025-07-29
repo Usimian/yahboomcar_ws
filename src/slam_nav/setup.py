@@ -16,7 +16,7 @@ setup(
         (os.path.join('share', package_name, 'config'), glob(os.path.join('config', '*.yaml'))),
         (os.path.join('share', package_name, 'maps'), glob(os.path.join('maps', '*.*'))),
         (os.path.join('share', package_name, 'rviz'), glob(os.path.join('rviz', '*.rviz'))),
-        (os.path.join('share', package_name, 'scripts'), glob(os.path.join('scripts', '*.py'))),
+
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -29,8 +29,11 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'initial_pose_publisher = scripts.initial_pose_publisher:main',
-            'velocity_monitor = scripts.velocity_monitor:main',
+            'initial_pose_publisher = slam_nav.initial_pose_publisher:main',
+            'velocity_monitor = slam_nav.velocity_monitor:main',
+            'rgb_to_occupancy = slam_nav.rgb_to_occupancy:main',
+            'camera_nav_monitor = slam_nav.camera_nav_monitor:main',
+            'test_camera_nav = slam_nav.test_camera_nav:main',
         ],
     },
 )

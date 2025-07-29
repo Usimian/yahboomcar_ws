@@ -228,11 +228,6 @@ class yahboomcar_driver(Node):
 			twist.angular.z = self.last_cmd_angular  # Use commanded angular velocity for reliable feedback
 			
 			self.velPublisher.publish(twist)
-			# print("ax: %.5f, ay: %.5f, az: %.5f" % (ax, ay, az))
-			# print("gx: %.5f, gy: %.5f, gz: %.5f" % (gx, gy, gz))
-			# print("mx: %.5f, my: %.5f, mz: %.5f" % (mx, my, mz))
-			# rospy.loginfo("battery: {}".format(battery))
-			# rospy.loginfo("vx: {}, vy: {}, angular: {}".format(twist.linear.x, twist.linear.y, twist.angular.z))
 			self.imuPublisher.publish(imu)
 			self.magPublisher.publish(mag)
 			self.volPublisher.publish(battery)
