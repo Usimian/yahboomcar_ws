@@ -5,11 +5,11 @@ alwaysApply: true
 This is a ROS2 humble workspace.
 The language is Python or C++
 The ROS2 packages have been sourced.
-This project is for the yahboomcar X3 with the S2 lidar and the astra pro plus camera
+This project is for the yahboomcar X3 with the S2 lidar and the Intel Realsense d435i camera
 Very important: Always check the terminal output for errors when running programs in the terminal.
 There are two other workspaces that have relevent context:
     ~/yahboomcar_ros2/yahboom_X3_lib - contains the rosmaster library
-    ~/yahboomcar_ros2/library_ws - contains the lidar and Astra Pro Plus camera packages
+    ~/yahboomcar_ros2/library_ws - contains the lidar packages
 All test files should start with test_
 Build ROS2 packages without --symlink-install
 Important - The robot is a Jetson Orin Nano connected via ssh to a Ubuntu 22 PC.

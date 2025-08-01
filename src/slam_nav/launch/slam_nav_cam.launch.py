@@ -4,10 +4,13 @@
 SLAM Navigation with Camera Launch File for slam_nav package
 Integrates slam_toolbox with Nav2 navigation stack for persistent mapping
 Brings up:
-- Complete robot system (robot_bringup.launch.py)
-- Astra Pro Plus camera
+- Complete robot system (robot_bringup.launch.py with built-in IMU)
+- Intel Realsense D435i camera (color + depth, IMU disabled)
 - SLAM Toolbox for persistent mapping
 - Nav2 navigation stack
+
+The RealSense IMU is disabled to avoid USB control transfer warnings on Jetson.
+Uses the robot's built-in IMU from yahboomcar_base_node instead.
 """
 
 import os
@@ -133,16 +136,28 @@ def generate_launch_description():
     pub_odom_tf = LaunchConfiguration('pub_odom_tf')
 
     # === CAMERA LAUNCH ===
-    # Astra Pro Plus Camera Launch
-    camera_launch = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('astra_camera'),
-                'launch',
-                'astro_pro_plus.launch.xml'
-            ])
-        ]),
-        launch_arguments={}.items()
+    # Intel Realsense D435i Camera with YAML configuration (IMU disabled)
+    # Using robot's built-in IMU instead to avoid USB control transfer warnings
+    realsense_params_file = os.path.join(
+        slam_nav_dir,
+        'config',
+        'realsense_params.yaml'
+    )
+    
+    camera_launch = Node(
+        package='realsense2_camera',
+        executable='realsense2_camera_node',
+        name='realsense_camera',  # Simple name without nested namespaces
+        parameters=[realsense_params_file],
+        output='screen',
+    )
+
+    # Bridge transform: Connect robot's camera_link to RealSense base frame (with hardcoded /camera namespace)
+    camera_link_bridge = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='camera_link_bridge',
+        arguments=['0', '0', '0', '0', '0', '0', 'camera_link', 'camera_camera_realsense_camera_link']
     )
 
     # === ROBOT BRINGUP ===
@@ -253,6 +268,7 @@ def generate_launch_description():
         # 1. Robot platform + Camera + Nav2 container (immediate)
         robot_bringup_cmd,
         camera_launch,
+        camera_link_bridge,  # Bridge robot camera_link to camera_camera_link
         nav2_container,
         # 2. Nav2 stack (3s delay - container ready)
         delayed_navigation_group,

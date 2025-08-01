@@ -131,6 +131,11 @@
     
     <!-- Camera -->
     <link name="camera_link">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0.01"/>
+            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+        </inertial>
         <visual>
             <geometry>
                 <box size="0.03 0.1 0.03"/>
@@ -142,7 +147,7 @@
     </link>
     
     <joint name="camera_joint" type="fixed">
-        <origin xyz="0.057 0.0 0.038" rpy="0 0 0"/>
+        <origin xyz="0.12 0.0 0.0285" rpy="0 0 0"/>
         <parent link="base_link"/>
         <child link="camera_link"/>
     </joint>

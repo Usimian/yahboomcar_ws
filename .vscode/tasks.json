@@ -101,15 +101,15 @@
                 "showReuseMessage": false,
                 "clear": true
             },
-            "detail": "Launch SLAM navigation system without RViz (headless mode)"
+            "detail": "Launch SLAM navigation system"
         },
         {
-            "label": "launch slam_nav_with_camera",
+            "label": "launch slam_nav_cam",
             "type": "shell",
             "command": "bash",
             "args": [
                 "-c",
-                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav nav_with_camera.launch.py"
+                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav slam_nav_cam.launch.py"
             ],
             "group": "test",
             "presentation": {
@@ -120,7 +120,7 @@
                 "showReuseMessage": false,
                 "clear": true
             },
-            "detail": "Launch SLAM navigation system without RViz (headless mode)"
+            "detail": "Launch SLAM navigation system with camera"
         }
     ],
     "inputs": [
@@ -131,7 +131,6 @@
             "options": [
                 "auto_drive",
                 "laserscan_to_point_publisher",
-                "robot_pose_publisher_ros2",
                 "yahboom_app_save_map",
                 "slam_nav",
                 "yahboomcar_astra",
