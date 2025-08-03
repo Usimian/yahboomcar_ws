@@ -8,9 +8,42 @@ This is a comprehensive ROS2 workspace for the **Yahboomcar X3** robot platform 
 
 - **Robot Platform**: Yahboomcar X3 (Mecanum wheel robot)
 - **Lidar**: SLAMTEC S2 lidar sensor
-- **Camera**: Astra Pro Plus (RGB-D camera)
+- **Camera**: Intel Realsense D435i (RGB-D camera)
 - **IMU**: Integrated inertial measurement unit
 - **Microcontroller**: Communication via `/dev/ttyUSB0`
+
+## Robot Physical Dimensions
+
+### Chassis Specifications
+- **Total Length**: 230mm
+- **Total Width**: 150mm (chassis), 200mm (wheel outer edges)
+- **Height**: 80mm (main chassis)
+- **Weight**: ~486g (base chassis)
+
+### Wheel Configuration
+- **Wheel Type**: Mecanum wheels
+- **Wheel Diameter**: 64mm
+- **Wheelbase**: 160mm (front to rear axle distance)
+- **Track Width**: 174mm (center-to-center), 200mm (outer edge-to-edge)
+- **Wheel Positions**:
+  - Front wheels: 20mm behind front edge
+  - Rear wheels: 20mm in front of rear edge
+
+### Sensor Mounting Positions
+- **Camera (Intel Realsense D435i)**:
+  - Position: 15mm behind front edge, centered
+  - Height: 122mm above ground
+  - Orientation: Forward-facing
+  
+- **Lidar (SLAMTEC S2)**:
+  - Position: 71.5mm behind front edge, centered
+  - Height: 191.5mm above ground
+  - Orientation: 360° scanning
+  
+- **IMU**:
+  - Position: 58.5mm in front of rear edge, 15mm left of center
+  - Height: 191.5mm above ground (level with lidar)
+  - Orientation: Standard navigation frame
 
 ## Workspace Structure
 
@@ -270,8 +303,10 @@ ros2 run yahboomcar_laser laser_Warning_a1_X3
 ### Robot Parameters
 - **Linear Velocity Limits**: 0.0 - 1.0 m/s
 - **Angular Velocity Limits**: 0.0 - 5.0 rad/s
-- **Wheel Configuration**: Mecanum wheels
-- **Base Dimensions**: Defined in URDF
+- **Wheel Configuration**: Mecanum wheels (64mm diameter)
+- **Base Dimensions**: 230mm × 150mm × 80mm (L × W × H)
+- **Wheelbase**: 160mm
+- **Track Width**: 174mm (center-to-center)
 
 ### Sensor Parameters
 - **Lidar Range**: 0.1 - 8.0 meters

@@ -3,7 +3,7 @@
 <package format="3">
   <name>yahboomcar_description</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Robot description package for Yahboomcar X3 platform. Contains URDF models, 3D meshes, and robot configurations for the 230mm × 150mm mecanum wheel robot with Intel Realsense D435i camera, SLAMTEC S2 lidar, and integrated IMU.</description>
   <maintainer email="nx-ros2@todo.todo">nx-ros2</maintainer>
   <license>TODO: License declaration</license>
 
