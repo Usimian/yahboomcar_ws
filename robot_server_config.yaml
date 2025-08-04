@@ -1,0 +1,28 @@
+# Robot Jetson Server Configuration
+# Configuration for the robot-side server running on Jetson
+
+robot_jetson_server:
+  ros__parameters:
+    # Client Hub Connection (PC running VILA)
+    client_hub_url: "http://192.168.1.100:5000"  # Change to your PC's IP
+    
+    # Robot Identification
+    robot_id: "yahboomcar_x3_01"  # Unique robot ID
+    
+    # Data Transmission Settings
+    send_frequency: 2.0  # Hz - how often to send data to hub
+    
+    # Image Settings
+    image_quality: 85  # JPEG quality (1-100)
+    
+    # Movement Parameters
+    linear_velocity: 0.2   # m/s - forward/backward speed
+    angular_velocity: 0.3  # rad/s - turning speed
+    
+    # Safety Settings
+    emergency_stop_enabled: true
+    max_no_response_time: 10.0  # seconds before emergency stop
+    
+    # Network Settings
+    request_timeout: 10.0  # seconds
+    connection_retry_interval: 5.0  # seconds
