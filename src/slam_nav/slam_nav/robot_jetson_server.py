@@ -26,7 +26,7 @@ from PIL import Image
 # ROS2 message imports
 from sensor_msgs.msg import Image as ImageMsg, CompressedImage, LaserScan, Imu
 from geometry_msgs.msg import Twist
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float32
 from cv_bridge import CvBridge
 
 class RobotJetsonServer(Node):
@@ -70,7 +70,8 @@ class RobotJetsonServer(Node):
         self.latest_image = None
         self.latest_lidar = None
         self.latest_imu = None
-        self.latest_battery = 100.0  # Placeholder
+        self.latest_voltage = None  # Battery voltage from /voltage topic
+        self.latest_battery = 100.0  # Calculated from voltage
         
         # Robot state
         self.robot_position = {'x': 0.0, 'y': 0.0, 'z': 0.0, 'heading': 0.0}
@@ -118,6 +119,14 @@ class RobotJetsonServer(Node):
             Imu,
             '/imu/data_raw',
             self.imu_callback,
+            10
+        )
+        
+        # Battery voltage subscriber
+        self.voltage_sub = self.create_subscription(
+            Float32,
+            '/voltage',
+            self.voltage_callback,
             10
         )
         
@@ -181,6 +190,30 @@ class RobotJetsonServer(Node):
                 'z': msg.linear_acceleration.z
             }
         }
+    
+    def voltage_callback(self, msg):
+        """Store latest voltage data and calculate battery percentage"""
+        self.latest_voltage = msg.data
+        
+        # Convert voltage to battery percentage
+        # Typical Li-ion battery: ~12.6V = 100%, ~10.0V = 0%
+        # Adjust these values based on your robot's battery specifications
+        voltage_max = 12.6  # Fully charged voltage
+        voltage_min = 10.0  # Empty voltage
+        
+        if self.latest_voltage is not None:
+            # Calculate percentage with bounds checking
+            percentage = ((self.latest_voltage - voltage_min) / (voltage_max - voltage_min)) * 100
+            self.latest_battery = max(0.0, min(100.0, percentage))
+            
+            # Log battery info occasionally
+            if hasattr(self, '_last_battery_log'):
+                if time.time() - self._last_battery_log > 30:  # Log every 30 seconds
+                    self.get_logger().info(f'🔋 Battery: {self.latest_voltage:.1f}V ({self.latest_battery:.1f}%)')
+                    self._last_battery_log = time.time()
+            else:
+                self._last_battery_log = time.time()
+                self.get_logger().info(f'🔋 Battery monitoring started: {self.latest_voltage:.1f}V ({self.latest_battery:.1f}%)')
     
     def register_with_hub(self):
         """Register this robot with the client hub"""
