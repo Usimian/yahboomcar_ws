@@ -16,3 +16,4 @@ All test files should start with test_
 Build ROS2 packages without --symlink-install
 Important - The robot is a Jetson Orin Nano connected via ssh to a Ubuntu 22 PC.
      Rviz2 is running on the robot and viewed using nomachine on the PC.
+All communications with the client are requested by the client (pull system)

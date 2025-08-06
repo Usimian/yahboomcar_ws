@@ -52,10 +52,13 @@ def generate_launch_description():
     initial_pose_y = LaunchConfiguration('initial_pose_y')
     initial_pose_yaw = LaunchConfiguration('initial_pose_yaw')
 
-    # Robot server parameters
+    # Single robot system parameters
     client_hub_url = LaunchConfiguration('client_hub_url')
+    controller_host = LaunchConfiguration('controller_host')
+    controller_port = LaunchConfiguration('controller_port')
     robot_id = LaunchConfiguration('robot_id')
     send_frequency = LaunchConfiguration('send_frequency')
+    command_poll_frequency = LaunchConfiguration('command_poll_frequency')
 
     # Set environment variables
     stdout_linebuf_envvar = SetEnvironmentVariable(
@@ -132,21 +135,36 @@ def generate_launch_description():
         default_value='0.0',
         description='Initial pose yaw angle')
 
-    # Robot Data Server arguments
+    # Single Robot System arguments (simplified)
     declare_client_hub_url_cmd = DeclareLaunchArgument(
         'client_hub_url',
         default_value='http://192.168.1.153:5000',
-        description='URL of the client hub (PC with VILA)')
+        description='Legacy: URL of the server (PC with VILA) - will be parsed for single robot system')
+    
+    declare_controller_host_cmd = DeclareLaunchArgument(
+        'controller_host',
+        default_value='192.168.1.153',
+        description='Single robot server host IP address')
+    
+    declare_controller_port_cmd = DeclareLaunchArgument(
+        'controller_port',
+        default_value='5000',
+        description='Single robot server port number')
 
     declare_robot_id_cmd = DeclareLaunchArgument(
         'robot_id',
         default_value='yahboomcar_x3_01',
-        description='Unique robot identifier')
+        description='Robot identifier (hardcoded as yahboomcar_x3_01)')
 
     declare_send_frequency_cmd = DeclareLaunchArgument(
         'send_frequency',
         default_value='2.0',
-        description='Frequency to send data to hub (Hz)')
+        description='Frequency to send image/sensor data to server (Hz)')
+    
+    declare_command_poll_frequency_cmd = DeclareLaunchArgument(
+        'command_poll_frequency',
+        default_value='2.0',
+        description='Frequency to poll server for commands (Hz)')
 
     # === ROBOT BRINGUP ===
     # Include the main slam_nav_cam launch file
@@ -171,7 +189,7 @@ def generate_launch_description():
         }.items()
     )
 
-    # === ROBOT DATA SERVER (sends data to PC client hub) ===
+    # === SINGLE ROBOT SYSTEM INTEGRATION ===
     robot_server_config = os.path.join(slam_nav_dir, 'config', 'robot_jetson_server.yaml')
     
     robot_server_node = Node(
@@ -182,14 +200,19 @@ def generate_launch_description():
         parameters=[
             robot_server_config,
             {
-                'client_hub_url': client_hub_url,
-                'robot_id': robot_id,
+                # Single robot system parameters
+                'controller_host': controller_host,
+                'controller_port': controller_port,
+                'robot_id': robot_id,  # Hardcoded as yahboomcar_x3_01
                 'send_frequency': send_frequency,
+                'command_poll_frequency': command_poll_frequency,
+                # Legacy parameter for backward compatibility
+                'client_hub_url': client_hub_url,
             }
         ]
     )
 
-    # Delayed robot data server launch - start after robot systems are ready
+    # Delayed single robot server launch - start after robot systems are ready
     delayed_robot_server = TimerAction(
         period=15.0,  # Start after SLAM and Nav2 are initialized
         actions=[robot_server_node]
@@ -216,12 +239,15 @@ def generate_launch_description():
         declare_initial_pose_y_cmd,
         declare_initial_pose_yaw_cmd,
         declare_client_hub_url_cmd,
+        declare_controller_host_cmd,
+        declare_controller_port_cmd,
         declare_robot_id_cmd,
         declare_send_frequency_cmd,
+        declare_command_poll_frequency_cmd,
 
         # Launch components in sequence:
         # 1. Main SLAM navigation system
         slam_nav_cam_launch,
-        # 2. Robot data server (delayed)
+        # 2. Single robot system integration (delayed)
         delayed_robot_server,
     ])

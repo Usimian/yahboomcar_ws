@@ -1,16 +1,17 @@
 # Robot Jetson Server Configuration
 # Configuration for the robot-side server running on Jetson
+# Updated for VILA Robot Hub sensor monitoring integration
 
 robot_jetson_server:
   ros__parameters:
-    # Client Hub Connection (PC running VILA)
-    client_hub_url: "http://192.168.1.100:5000"  # Change to your PC's IP
+    # Client Hub Connection (PC running VILA Robot Hub)
+    client_hub_url: "http://192.168.1.153:5000"  # Change to your PC's IP
     
     # Robot Identification
     robot_id: "yahboomcar_x3_01"  # Unique robot ID
     
     # Data Transmission Settings
-    send_frequency: 2.0  # Hz - how often to send data to hub
+    send_frequency: 5.0  # Hz - how often to send sensor data to hub (increased for better monitoring)
     
     # Image Settings
     image_quality: 85  # JPEG quality (1-100)
@@ -26,3 +27,25 @@ robot_jetson_server:
     # Network Settings
     request_timeout: 10.0  # seconds
     connection_retry_interval: 5.0  # seconds
+    
+    # Sensor Monitoring Settings (for VILA Robot Hub GUI)
+    sensor_data_validation: true  # Enable sensor data validation
+    battery_monitoring: true      # Enable battery voltage monitoring
+    temperature_monitoring: true  # Enable temperature monitoring
+    lidar_monitoring: true        # Enable lidar distance monitoring
+    imu_monitoring: true          # Enable IMU heading monitoring
+    camera_monitoring: true       # Enable camera status monitoring
+    
+    # Battery Configuration
+    battery_min_voltage: 10.0     # Minimum battery voltage (0%)
+    battery_max_voltage: 12.6     # Maximum battery voltage (100%)
+    battery_warning_level: 20.0   # Battery warning level (%)
+    battery_critical_level: 10.0  # Battery critical level (%)
+    
+    # Sensor Update Frequencies (Hz)
+    sensor_update_frequencies:
+      battery: 0.5      # Every 2 seconds (slow changing)
+      temperature: 1.0  # Every 1 second (moderate changing)
+      lidar: 5.0        # Every 0.2 seconds (fast changing)
+      imu: 5.0          # Every 0.2 seconds (fast changing)
+      camera: 2.0       # Every 0.5 seconds (moderate changing)

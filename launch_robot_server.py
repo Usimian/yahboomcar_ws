@@ -32,8 +32,8 @@ def generate_launch_description():
     
     # Robot server node
     robot_server_node = Node(
-        package='robot_integration',  # You may need to create this package
-        executable='robot_jetson_server.py',
+        package='slam_nav',  # Correct package name
+        executable='robot_jetson_server',  # ROS2 entry point (no .py)
         name='robot_jetson_server',
         output='screen',
         parameters=[{
