@@ -5,6 +5,7 @@ alwaysApply: true
 This is a ROS2 humble workspace.
 The language is Python or C++.
 The ROS2 packages have been sourced.
+The robot CPU is a jetson Orin Nano
 This project is for the yahboomcar X3 robot with the S2 lidar and the Intel Realsense d435i camera.
 Very important: Always check the terminal output for errors when running programs in the terminal.
 There are two other workspaces that have relevent context:
@@ -15,5 +16,5 @@ The client is on a separate machine (AMD64 Ubuntu 22.04) connected via ssh to th
 All test files should start with test_
 Build ROS2 packages without --symlink-install
 Important - The robot is a Jetson Orin Nano connected via ssh to a Ubuntu 22 PC.
-     Rviz2 is running on the robot and viewed using nomachine on the PC.
 All communications with the client are requested by the client (pull system)
+Whenever possible, gracefully shut down your publisher node on the robot (e.g., Ctrl+C, not using kill -9)

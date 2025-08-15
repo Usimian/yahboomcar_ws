@@ -381,3 +381,18 @@ velocity_smoother:
 velocity_smoother_rclcpp_node:
   ros__parameters:
     use_sim_time: False
+
+# Lifecycle Manager Configuration
+lifecycle_manager:
+  ros__parameters:
+    use_sim_time: False
+    autostart: True
+    node_names: [
+      'controller_server',
+      'smoother_server', 
+      'planner_server',
+      'behavior_server',
+      'bt_navigator',
+      'waypoint_follower',
+      'velocity_smoother'
+    ]

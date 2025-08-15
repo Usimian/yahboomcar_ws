@@ -85,12 +85,12 @@
             "detail": "Clean and build entire ROS 2 workspace (handles dependencies automatically)"
         },
         {
-            "label": "launch slam_nav",
+            "label": "launch robot_slam_nav",
             "type": "shell",
             "command": "bash",
             "args": [
                 "-c",
-                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav slam_nav.launch.py"
+                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav robot_slam_nav.launch.py"
             ],
             "group": "test",
             "presentation": {
@@ -102,25 +102,6 @@
                 "clear": true
             },
             "detail": "Launch SLAM navigation system"
-        },
-        {
-            "label": "launch slam_nav_cam",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                "-c",
-                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav slam_nav_cam.launch.py"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "shared",
-                "showReuseMessage": false,
-                "clear": true
-            },
-            "detail": "Launch SLAM navigation system with camera"
         },
         {
             "label": "sync workspace to PC",
@@ -246,6 +227,7 @@
                 "laserscan_to_point_publisher",
                 "yahboom_app_save_map",
                 "slam_nav",
+                "robot_ros2_bridge",
                 "yahboomcar_astra",
                 "yahboomcar_base_node",
                 "yahboomcar_bringup",
