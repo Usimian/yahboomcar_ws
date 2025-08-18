@@ -113,7 +113,6 @@ def generate_launch_description():
         joint_state_publisher_node,
         joint_state_publisher_gui_node,
         robot_state_publisher_node,
-        # rviz_node
         driver_node,
         base_node,
         imu_filter_node,

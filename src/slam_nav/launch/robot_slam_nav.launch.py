@@ -2,19 +2,17 @@
 
 """
 Robot SLAM Navigation Launch File - Single Comprehensive Launch
-Brings up the complete robot system with SLAM mapping and Robot VILA System
+Brings up the complete robot system with SLAM mapping
 This is the ONLY launch file needed to run the robot system.
 
 Includes:
 - Complete robot hardware system (drivers, sensors, lidar, camera)
 - SLAM Toolbox for persistent mapping
-- Robot VILA System for AI-powered control (single gateway architecture)
-- RViz2 for visualization
 - EKF sensor fusion and localization
 
 Robot control via:
 1. Manual joystick control
-2. Robot VILA System (AI-powered commands through /robot/execute_command)
+2. Robot Client System (AI-powered commands through /robot/execute_command)
 3. Direct /cmd_vel publishing (for testing only)
 """
 
@@ -97,17 +95,17 @@ def generate_launch_description():
         arguments=['--ros-args', '--log-level', log_level]
     )
 
-    # === ROBOT VILA SYSTEM ===
-    # Include the robot VILA gateway system for AI-powered control
-    robot_vila_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            get_package_share_directory('robot_vila_system'),
-            '/launch/robot_gateway_system.launch.py'
-        ]),
-        launch_arguments={
+    # === ROBOT INTERFACE ===
+    # Direct robot interface node for external client control
+    robot_interface_node = Node(
+        package='slam_nav',
+        executable='robot_interface_node',
+        name='robot_interface_node',
+        output='screen',
+        parameters=[{
             'robot_id': 'yahboomcar_x3_01',
-            'log_level': log_level,
-        }.items()
+        }],
+        arguments=['--ros-args', '--log-level', log_level]
     )
 
     # Group SLAM components with delay to ensure robot is ready
@@ -120,12 +118,12 @@ def generate_launch_description():
         ]
     )
     
-    # Group VILA system with delay to ensure robot and SLAM are ready
-    delayed_vila_group = TimerAction(
+    # Group Robot Interface with delay to ensure robot and SLAM are ready
+    delayed_interface_group = TimerAction(
         period=8.0,  # 8 second delay  
         actions=[
             GroupAction([
-                robot_vila_cmd,
+                robot_interface_node,
             ])
         ]
     )
@@ -147,6 +145,6 @@ def generate_launch_description():
         robot_bringup_cmd,
         # 2. SLAM Toolbox (5s delay - robot ready)
         delayed_slam_group,
-        # 3. Robot VILA System (8s delay - SLAM ready)
-        delayed_vila_group,
+        # 3. Robot Interface (8s delay - SLAM ready)
+        delayed_interface_group,
     ])

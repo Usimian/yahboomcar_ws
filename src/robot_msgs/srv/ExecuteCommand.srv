@@ -5,5 +5,3 @@ RobotCommand command
 ---
 bool success                       # Execution success
 string result_message              # Result description
-string execution_id                # Unique execution identifier
-int64 estimated_duration_ns        # Estimated completion time

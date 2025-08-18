@@ -43,8 +43,19 @@
     accel_frame_id: "camera_accel_frame"
     
     # === CONNECTION SETTINGS ===
-    wait_for_device_timeout: 15.0
-    reconnect_timeout: 5.0
+    wait_for_device_timeout: -1.0          # Disable timeout (wait indefinitely)
+    reconnect_timeout: -1.0               # Disable reconnection timeout
+    initial_reset: false                  # Disable initial reset
+    device_type: ""
+    retry_on_usb_reset: false            # Disable USB reset retry
+    use_intra_process: false             # Disable intra-process communication
+    
+    # === USB OPTIMIZATION SETTINGS ===
+    usb_port_id: ""                       # Auto-detect USB port
+    enable_depth_scale: true              # Enable depth scaling
+    clip_distance: 10.0                   # Clip depth at 10 meters to reduce data
+    temporal_filter.enable: true          # Enable temporal filtering for stability
+    spatial_filter.enable: true          # Enable spatial filtering for noise reduction
     
     # === EXPOSURE SETTINGS (auto-exposure enabled for better lighting) ===
     depth_module.enable_auto_exposure: true

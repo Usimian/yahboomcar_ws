@@ -85,6 +85,47 @@
             "detail": "Clean and build entire ROS 2 workspace (handles dependencies automatically)"
         },
         {
+            "label": "build slam_nav",
+            "type": "shell",
+            "command": "colcon",
+            "args": [
+                "build",
+                "--packages-up-to",
+                "slam_nav",
+                "--cmake-args",
+                "-DCMAKE_BUILD_TYPE=Release"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Build slam_nav package"
+        },
+        {
+            "label": "clean and build slam_nav",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "rm -rf build/slam_nav install/slam_nav log/build_slam_nav* && colcon build --packages-up-to slam_nav --cmake-args -DCMAKE_BUILD_TYPE=Release"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Clean and build slam_nav package"
+        },
+        {
             "label": "launch robot_slam_nav",
             "type": "shell",
             "command": "bash",

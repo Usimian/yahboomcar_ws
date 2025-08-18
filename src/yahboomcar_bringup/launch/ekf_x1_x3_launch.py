@@ -37,11 +37,11 @@ def generate_launch_description():
             'publish_tf': False,  # FIXED: Disable TF publishing from EKF (has broken rotation data)
             'map_frame': 'map',
             
-            # Odometry configuration - wheel encoders (including angular velocity)
+            # Odometry configuration - wheel encoders for position and velocities
             'odom0': 'odom_raw',
-            'odom0_config': [False, False, False,
-                           False, False, True,   # Use yaw pose from odometry
-                           True,  True,  True,   # Use linear velocities
+            'odom0_config': [True,  True,  False,  # Use x, y position from odometry
+                           False, False, False,  # Don't use yaw pose from odometry (use IMU)
+                           True,  True,  False,  # Use linear velocities from odometry
                            False, False, True,   # Use yaw angular velocity from odometry
                            False, False, False],
             'odom0_queue_size': 20,  # Increase queue size for better buffering
@@ -51,25 +51,21 @@ def generate_launch_description():
             'odom0_pose_rejection_threshold': 5.0,
             'odom0_twist_rejection_threshold': 1.0,
             
-            # IMU configuration - Using raw IMU data due to filter bias issues
-            # The IMU data will be used for orientation but transforms come from URDF
+            # IMU configuration - FIXED to work properly with odometry sensor fusion
+            # Use IMU for orientation stability, odometry for angular velocity
             'imu0': 'imu/data_raw',
             'imu0_config': [False, False, False,
-                           False, False, True,   # Use yaw orientation only
+                           False, False, True,   # Use yaw orientation from IMU for stability
                            False, False, False,
-                           False, False, False,  # DISABLE yaw angular velocity (too much bias)
-                           False, False, False], # Do NOT use accelerations to prevent drift
+                           False, False, False,  # Don't use IMU angular velocity (use odometry instead)
+                           False, False, False], # Don't use accelerations to prevent drift
             'imu0_nodelay': False,
             'imu0_differential': False,
-            'imu0_relative': True,  # Use relative measurements
+            'imu0_relative': False,  # Use absolute measurements for IMU
             'imu0_queue_size': 20,
-            'imu0_pose_rejection_threshold': 0.8,
-            'imu0_twist_rejection_threshold': 0.8,
-            'imu0_linear_acceleration_rejection_threshold': 0.8,
-            'imu0_remove_gravitational_acceleration': True,
-            
-            # CRITICAL: Do NOT publish transforms for IMU frame
-            # Let URDF static transforms handle base_link -> imu_link
+            'imu0_pose_rejection_threshold': 2.0,  # More permissive threshold
+            'imu0_twist_rejection_threshold': 1.0,
+            'imu0_linear_acceleration_rejection_threshold': 1.0,
             'imu0_remove_gravitational_acceleration': True,
             
             # Process noise covariance matrix - tuned for X3 robot

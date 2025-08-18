@@ -7,6 +7,7 @@ Brings up the complete robot system including:
 - Base node for odometry and transforms  
 - IMU filtering
 - EKF for sensor fusion
+- Intel RealSense D435i camera
 - S2 lidar
 - Robot state publisher
 - Joint state publisher
@@ -155,6 +156,25 @@ def generate_launch_description():
         ])
     )
     
+    # === CAMERA ===
+    
+    # RealSense D435i camera node
+    realsense_params_file = os.path.join(
+        get_package_share_directory('slam_nav'),
+        'config',
+        'realsense_params.yaml'
+    )
+    
+    realsense_node = Node(
+        package='realsense2_camera',
+        executable='realsense2_camera_node',
+        namespace='realsense',  # Use realsense namespace
+        name='camera',
+        output='screen',
+        parameters=[realsense_params_file],
+        arguments=['--ros-args', '--log-level', 'warn']  # Reduce log verbosity
+    )
+    
     # === LIDAR ===
     
     # S2 lidar node - Simple configuration to get full 360° data
@@ -170,7 +190,8 @@ def generate_launch_description():
             'frame_id': 'laser_link',
             'inverted': False,
             'angle_compensate': True,
-            'scan_mode': 'Standard'      # Try Standard mode instead of DenseBoost
+            'scan_mode': 'Standard',     # Try Standard mode instead of DenseBoost
+            'use_sim_time': False        # Explicitly set to false for system time usage
         }]
     )
 
@@ -211,6 +232,9 @@ def generate_launch_description():
         # IMU and sensor fusion
         # imu_filter_node,  # Disabled due to gyroscope bias
         ekf_node,
+        
+        # Camera
+        realsense_node,
         
         # Lidar
         lidar_node,

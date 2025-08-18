@@ -71,6 +71,9 @@ class OdomPublisher:public rclcpp ::Node
             this->get_parameter<std::string>("odom_frame",odom_frame);
             this->get_parameter<std::string>("base_footprint_frame",base_footprint_frame);
         tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+        
+        // Initialize last_vel_time_ to prevent huge vel_dt_ on first call
+        last_vel_time_ = rclcpp::Clock().now();
 
 	  	subscription_ = this->create_subscription<geometry_msgs::msg::Twist>("vel_raw",50,std::bind(&OdomPublisher::handle_vel,this,_1));
 	  	odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom_raw", 50);

@@ -34,6 +34,7 @@ setup(
             'rgb_to_occupancy = slam_nav.rgb_to_occupancy:main',
             'camera_nav_monitor = slam_nav.camera_nav_monitor:main',
             'test_camera_nav = slam_nav.test_camera_nav:main',
+            'robot_interface_node = slam_nav.robot_interface_node:main',
         ],
     },
 )
