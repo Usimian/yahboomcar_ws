@@ -420,13 +420,19 @@ class RobotInterfaceNode(Node):
     def scan_callback(self, msg):
         """Handle lidar scan input"""
         if len(msg.ranges) > 0:
-            front_idx = len(msg.ranges) // 2
-            left_idx = len(msg.ranges) * 3 // 4
-            right_idx = len(msg.ranges) // 4
+            # COORDINATE FRAME CORRECTION for sensor message only:
+            # Lidar 0° points backward from robot perspective, so we need to map:
+            # - Robot front = Lidar 180° (index 0, since lidar goes from -180° to +180°)
+            # - Robot left = Lidar 90° (index 3/4 of array) 
+            # - Robot right = Lidar -90° (index 1/4 of array)
+            
+            front_idx = 0  # Lidar -180°/180° = Robot front
+            left_idx = len(msg.ranges) * 3 // 4   # Lidar 90° = Robot left
+            right_idx = len(msg.ranges) // 4      # Lidar -90° = Robot right
             
             self.sensor_data.distance_front = msg.ranges[front_idx] if front_idx < len(msg.ranges) else 0.0
-            self.sensor_data.distance_left = msg.ranges[left_idx] if left_idx < len(msg.ranges) else 0.0
-            self.sensor_data.distance_right = msg.ranges[right_idx] if right_idx < len(msg.ranges) else 0.0
+            self.sensor_data.distance_left = msg.ranges[right_idx] if right_idx < len(msg.ranges) else 0.0  # Swapped: use right_idx value for left
+            self.sensor_data.distance_right = msg.ranges[left_idx] if left_idx < len(msg.ranges) else 0.0   # Swapped: use left_idx value for right
     
     def battery_callback(self, msg):
         """Handle battery voltage input"""
