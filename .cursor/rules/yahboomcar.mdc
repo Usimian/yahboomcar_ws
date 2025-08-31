@@ -12,7 +12,6 @@ There are two other workspaces that have relevent context:
     ~/yahboomcar_ros2/yahboom_X3_lib - contains the rosmaster library.
     ~/yahboomcar_ros2/library_ws - contains the lidar packages.
 The client is on a separate machine (AMD64 Ubuntu 22.04) connected via ssh to the robot.
-    A copy of the client code is at /home/mw/Robot_LLM
 All test files should start with test_
 Build ROS2 packages without --symlink-install
 Important - The robot is a Jetson Orin Nano connected via ssh to a Ubuntu 22 PC.

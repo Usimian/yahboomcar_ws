@@ -430,9 +430,7 @@ class RobotInterfaceNode(Node):
             left_idx = len(msg.ranges) * 3 // 4   # Lidar 90° = Robot left
             right_idx = len(msg.ranges) // 4      # Lidar -90° = Robot right
             
-            self.sensor_data.distance_front = msg.ranges[front_idx] if front_idx < len(msg.ranges) else 0.0
-            self.sensor_data.distance_left = msg.ranges[right_idx] if right_idx < len(msg.ranges) else 0.0  # Swapped: use right_idx value for left
-            self.sensor_data.distance_right = msg.ranges[left_idx] if left_idx < len(msg.ranges) else 0.0   # Swapped: use left_idx value for right
+
     
     def battery_callback(self, msg):
         """Handle battery voltage input"""

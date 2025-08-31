@@ -115,9 +115,7 @@ command.command_type = "stop"
 string robot_id              # "yahboomcar_x3_01"
 float64 battery_voltage       # Battery voltage (V)
 float64 cpu_temp             # CPU temperature (°C)
-float64 distance_front       # Front lidar distance (m)
-float64 distance_left        # Left lidar distance (m) 
-float64 distance_right       # Right lidar distance (m)
+
 float64 cpu_usage            # CPU usage (0-100%)
 string camera_status         # "active" or "unknown"
 int64 timestamp_ns           # Timestamp (nanoseconds)
