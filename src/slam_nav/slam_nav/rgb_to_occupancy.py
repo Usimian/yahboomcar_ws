@@ -3,8 +3,6 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, PointCloud2
-from geometry_msgs.msg import Point32
-from std_msgs.msg import Header
 from cv_bridge import CvBridge
 import cv2
 import numpy as np

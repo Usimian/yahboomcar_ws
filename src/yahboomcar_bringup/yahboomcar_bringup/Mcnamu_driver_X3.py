@@ -17,6 +17,7 @@ from std_msgs.msg import String,Float32,Int32,Bool
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu,MagneticField, JointState
 from rclpy.clock import Clock
+from robot_msgs.srv import GetBatteryVoltage
 
 #from dynamic_reconfigure.server import Server
 car_type_dic={
@@ -74,11 +75,13 @@ class yahboomcar_driver(Node):
 
 		#create publisher
 		self.EdiPublisher = self.create_publisher(Float32,"edition",100)
-		self.volPublisher = self.create_publisher(Float32,"voltage",100)
 		self.staPublisher = self.create_publisher(JointState,"joint_states",100)
 		self.velPublisher = self.create_publisher(Twist,"vel_raw",50)
 		self.imuPublisher = self.create_publisher(Imu,"imu/data_raw",100)
 		self.magPublisher = self.create_publisher(MagneticField,"imu/mag",100)
+
+		#create service
+		self.battery_service = self.create_service(GetBatteryVoltage, 'get_battery_voltage', self.get_battery_voltage_callback)
 
 		# Initialize hardware communication properly
 		self.car.create_receive_threading()
@@ -97,8 +100,7 @@ class yahboomcar_driver(Node):
 		# Test initial sensor readings
 		try:
 			test_version = self.car.get_version()
-			test_voltage = self.car.get_battery_voltage()
-			self.get_logger().info(f"Initial sensor test - Version: {test_version:.1f}, Battery: {test_voltage:.2f}V")
+			self.get_logger().info(f"Initial sensor test - Version: {test_version:.1f}")
 			
 			# Read and print first IMU message
 			try:
@@ -157,12 +159,25 @@ class yahboomcar_driver(Node):
 		else:
 			for i in range(3): self.car.set_beep(0)
 
+	def get_battery_voltage_callback(self, request, response):
+		"""Service callback to provide battery voltage to other nodes"""
+		try:
+			voltage = self.car.get_battery_voltage()
+			response.voltage = float(voltage)
+			response.success = True
+			response.message = "Battery voltage read successfully"
+		except Exception as e:
+			response.voltage = 0.0
+			response.success = False
+			response.message = f"Failed to read battery voltage: {str(e)}"
+		
+		return response
+
 	def pub_data(self):
 		try:
 			time_stamp = Clock().now()
 			imu = Imu()
 			twist = Twist()
-			battery = Float32()
 			edition = Float32()
 			mag = MagneticField()
 			state = JointState()
@@ -177,9 +192,8 @@ class yahboomcar_driver(Node):
 			
 			# Get sensor data with error handling
 			try:
-				#print ("mag: ",self.car.get_magnetometer_data())		
+				#print ("mag: ",self.car.get_magnetometer_data())
 				edition.data = self.car.get_version()*1.0
-				battery.data = self.car.get_battery_voltage()*1.0
 				ax, ay, az = self.car.get_accelerometer_data()
 				gx, gy, gz = self.car.get_gyroscope_data()
 				mx, my, mz = self.car.get_magnetometer_data()
@@ -191,7 +205,7 @@ class yahboomcar_driver(Node):
 				# Debug output every 50 cycles (5 seconds)
 				self.debug_counter += 1
 				if self.debug_enabled and self.debug_counter % 50 == 0:
-					self.get_logger().info(f"Hardware data - Version: {edition.data:.1f}, Battery: {battery.data:.2f}V")
+					self.get_logger().info(f"Hardware data - Version: {edition.data:.1f}")
 					self.get_logger().info(f"IMU - Accel: ({ax:.3f}, {ay:.3f}, {az:.3f}), Gyro: ({gx:.3f}, {gy:.3f}, {gz:.3f})")
 					self.get_logger().info(f"Mag: ({mx:.1f}, {my:.1f}, {mz:.1f}), Motion: ({vx:.3f}, {vy:.3f}, {angular:.3f})")
 					
@@ -199,7 +213,6 @@ class yahboomcar_driver(Node):
 				self.get_logger().error(f"Error reading sensor data: {str(e)}")
 				# Set default values on error
 				edition.data = -1.0
-				battery.data = 0.0
 				ax = ay = az = 0.0
 				gx = gy = gz = 0.0
 				mx = my = mz = 0.0
@@ -230,7 +243,6 @@ class yahboomcar_driver(Node):
 			self.velPublisher.publish(twist)
 			self.imuPublisher.publish(imu)
 			self.magPublisher.publish(mag)
-			self.volPublisher.publish(battery)
 			self.EdiPublisher.publish(edition)
 			
 		except Exception as e:

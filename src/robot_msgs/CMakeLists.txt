@@ -17,6 +17,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RobotCommand.msg"
   "msg/SensorData.msg"
   "srv/ExecuteCommand.srv"
+  "srv/GetBatteryVoltage.srv"
   DEPENDENCIES std_msgs sensor_msgs geometry_msgs
 )
 

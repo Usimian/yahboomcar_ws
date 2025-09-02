@@ -9,9 +9,8 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image, LaserScan
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Float32
-from robot_msgs.msg import RobotCommand, SensorData
-from robot_msgs.srv import ExecuteCommand
+from robot_msgs.msg import SensorData
+from robot_msgs.srv import ExecuteCommand, GetBatteryVoltage
 import time
 import psutil
 import math
@@ -24,7 +23,7 @@ class RobotInterfaceNode(Node):
         
         # Robot identification
         self.robot_id = "yahboomcar_x3_01"
-        
+
         # Movement state tracking
         self.movement_active = False
         self.movement_thread = None
@@ -39,6 +38,9 @@ class RobotInterfaceNode(Node):
             '/robot/execute_command', 
             self.execute_command_callback
         )
+
+        # Battery voltage service client
+        self.battery_client = self.create_client(GetBatteryVoltage, 'get_battery_voltage')
         
         # Setup publishers and subscribers
         self.setup_publishers()
@@ -48,12 +50,12 @@ class RobotInterfaceNode(Node):
         self.is_moving = False
         self.last_command_time = time.time()
         self.robot_status = "online"
-        self.battery_level = 100.0
         
         # Sensor data storage
         self.sensor_data = SensorData()
         self.sensor_data.robot_id = self.robot_id
         self.sensor_data.camera_status = "unknown"
+        self.sensor_data.battery_voltage = 0.0  # Initialize battery voltage
         
         # Publishing timer
         self.sensor_timer = self.create_timer(0.5, self.publish_sensor_data)   # 2Hz
@@ -70,10 +72,7 @@ class RobotInterfaceNode(Node):
             
         # Direct robot control (used by this node only)
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
-        
-        # Battery voltage for compatibility
-        self.voltage_pub = self.create_publisher(Float32, '/voltage', 10)
-        
+
         self.get_logger().info('📡 Robot interface publishers initialized')
         
     def setup_subscribers(self):
@@ -86,11 +85,7 @@ class RobotInterfaceNode(Node):
         # Lidar input
         self.scan_sub = self.create_subscription(
             LaserScan, '/scan', self.scan_callback, 10)
-            
-        # Battery voltage input
-        self.battery_sub = self.create_subscription(
-            Float32, '/voltage', self.battery_callback, 10)
-            
+
         # Odometry input for precision movement
         self.odom_sub = self.create_subscription(
             Odometry, '/odom_raw', self.odom_callback, 10)
@@ -404,14 +399,57 @@ class RobotInterfaceNode(Node):
             self.sensor_data.cpu_usage = psutil.cpu_percent(interval=None)
         except Exception:
             self.sensor_data.cpu_usage = 0.0
+
+        # Get battery voltage from main driver via service
+        # Use a cached value approach to avoid blocking the timer callback
+        if not hasattr(self, '_last_battery_update'):
+            self._last_battery_update = 0
+            self._cached_battery_voltage = 0.0
+            self._battery_request_pending = False
         
+        current_time = time.time()
+        
+        # Update battery voltage every 2 seconds (less frequent than sensor publishing)
+        if current_time - self._last_battery_update > 2.0 and not self._battery_request_pending:
+            if self.battery_client.service_is_ready():
+                try:
+                    self._battery_request_pending = True
+                    request = GetBatteryVoltage.Request()
+                    future = self.battery_client.call_async(request)
+                    
+                    # Add callback to handle response asynchronously
+                    def battery_response_callback(future):
+                        try:
+                            response = future.result()
+                            if response.success:
+                                self._cached_battery_voltage = response.voltage
+                                if not hasattr(self, '_battery_connected_logged'):
+                                    self.get_logger().info(f"Battery service connected - voltage: {response.voltage:.2f}V")
+                                    self._battery_connected_logged = True
+                            else:
+                                self.get_logger().warning(f"Battery service failed: {response.message}")
+                        except Exception as e:
+                            self.get_logger().warning(f"Battery service error: {str(e)}")
+                        finally:
+                            self._battery_request_pending = False
+                            self._last_battery_update = time.time()
+                    
+                    future.add_done_callback(battery_response_callback)
+                    
+                except Exception as e:
+                    self.get_logger().warning(f"Failed to call battery service: {str(e)}")
+                    self._battery_request_pending = False
+            else:
+                if not hasattr(self, '_service_warning_shown'):
+                    self.get_logger().warning("Battery service not ready")
+                    self._service_warning_shown = True
+                self._last_battery_update = current_time  # Don't spam warnings
+        
+        # Use cached battery voltage
+        self.sensor_data.battery_voltage = self._cached_battery_voltage
+
         # Publish sensor data
         self.sensor_pub.publish(self.sensor_data)
-        
-        # Publish battery voltage for compatibility
-        voltage_msg = Float32()
-        voltage_msg.data = 10.5 + (self.battery_level / 100.0) * 2.1
-        self.voltage_pub.publish(voltage_msg)
     
     def camera_callback(self, msg):
         """Handle camera input for status monitoring"""
@@ -429,20 +467,12 @@ class RobotInterfaceNode(Node):
             front_idx = 0  # Lidar -180°/180° = Robot front
             left_idx = len(msg.ranges) * 3 // 4   # Lidar 90° = Robot left
             right_idx = len(msg.ranges) // 4      # Lidar -90° = Robot right
-            
 
-    
-    def battery_callback(self, msg):
-        """Handle battery voltage input"""
-        self.sensor_data.battery_voltage = msg.data
-        
-        # Update battery level
-        voltage_range = 2.1  # 12.6V - 10.5V
-        self.battery_level = max(0.0, min(100.0, ((msg.data - 10.5) / voltage_range) * 100.0))
-    
+
     def odom_callback(self, msg):
         """Handle odometry updates for precision movement"""
         self.current_pose = msg.pose.pose
+
     
     def __del__(self):
         """Cleanup robot interface"""

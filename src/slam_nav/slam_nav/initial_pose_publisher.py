@@ -7,9 +7,8 @@ Automatically publishes initial pose for robot localization at startup
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from tf_transformations import quaternion_from_euler
-import math
 
 
 class InitialPosePublisher(Node):

@@ -137,8 +137,7 @@ int64 timestamp_ns           # Timestamp (nanoseconds)
 /odom                                      # Filtered odometry (nav_msgs/Odometry)
 /odom_raw                                  # Raw wheel odometry (nav_msgs/Odometry)
 
-# System Status  
-/voltage                                   # Battery voltage (std_msgs/Float32)
+# System Status
 # Manual robot command
 ros2 service call /robot/execute_command robot_msgs/srv/ExecuteCommand \
   "{command: {robot_id: 'yahboomcar_x3_01', command_type: 'move', 

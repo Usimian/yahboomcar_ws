@@ -1,0 +1,7 @@
+# Service to get battery voltage from the main driver
+# Request - empty (no parameters needed)
+---
+# Response
+float64 voltage    # Battery voltage in volts
+bool success       # True if reading was successful
+string message     # Status message or error description
