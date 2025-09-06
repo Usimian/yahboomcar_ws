@@ -12,6 +12,8 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 from actionlib_msgs.msg import GoalID
 from std_msgs.msg import Int32, Bool
+from robot_msgs.srv import ExecuteCommand
+from robot_msgs.msg import RobotCommand
 
 class JoyTeleop(Node):
 	def __init__(self,name):
@@ -30,6 +32,7 @@ class JoyTeleop(Node):
 		self.prev_linear_button_state = False
 		self.prev_angular_button_state = False
 		self.prev_start_button_state = False
+		self.prev_b_button_state = False
 		
 		# Define joystick control mappings
 		self.setup_control_mappings()
@@ -43,6 +46,9 @@ class JoyTeleop(Node):
 		
 		#create sub
 		self.sub_Joy = self.create_subscription(Joy,'joy', self.buttonCallback,10)
+
+		#create service client for robot commands
+		self.robot_command_client = self.create_client(ExecuteCommand, '/robot/execute_command')
 		
 		#declare parameter and get the value
 		self.declare_parameter('xspeed_limit',1.0)
@@ -61,7 +67,8 @@ class JoyTeleop(Node):
 				'right_button': 7,	# RGB light
 				'select': 10,		# Buzzer
 				'left_joystick_button': 13,	# Linear gear
-				'right_joystick_button': 14	# Angular gear
+				'right_joystick_button': 14,	# Angular gear
+				'b_button': 1		# Stop command
 			},
 			'axes': {
 				'joy_left_y': 1,    # Forward/backward
@@ -98,6 +105,7 @@ class JoyTeleop(Node):
 		current_rgb_button = self.get_button_state(joy_data, 'right_button')
 		current_linear_button = self.get_button_state(joy_data, 'left_joystick_button')
 		current_angular_button = self.get_button_state(joy_data, 'right_joystick_button')
+		current_b_button = self.get_button_state(joy_data, 'b_button')
 		
 		# Drive on/off - detect button press transition
 		if current_start_button and not self.prev_start_button_state:
@@ -124,12 +132,17 @@ class JoyTeleop(Node):
 			elif self.angular_speed == 1.0 / 4: self.angular_speed = 1.0 / 2
 			elif self.angular_speed == 1.0 / 2: self.angular_speed = 3.0 / 4
 			elif self.angular_speed == 3.0 / 4: self.angular_speed = 1.0
+
+		# B button - Stop command - detect button press transition
+		if current_b_button and not self.prev_b_button_state:
+			self.execute_stop_command()
 			
 		# Update previous button states for next iteration
 		self.prev_start_button_state = current_start_button
 		self.prev_rgb_button_state = current_rgb_button
 		self.prev_linear_button_state = current_linear_button
 		self.prev_angular_button_state = current_angular_button
+		self.prev_b_button_state = current_b_button
 			
 		# Get movement values using named axes
 		xlinear_speed = self.filter_data(self.get_axis_value(joy_data, 'joy_left_y')) * self.xspeed_limit * self.linear_speed
@@ -164,7 +177,7 @@ class JoyTeleop(Node):
 			Joy_ctrl = Bool()
 			self.Joy_active = not self.Joy_active
 			Joy_ctrl.data = self.Joy_active
-			
+
 			# Beep pattern: 1 beep for enable, 2 beeps for disable
 			beep_msg = Bool()
 			if self.Joy_active:
@@ -187,10 +200,54 @@ class JoyTeleop(Node):
 				time.sleep(0.2)
 				beep_msg.data = False
 				self.pub_Buzzer.publish(beep_msg)
-			
+
 			self.pub_JoyState.publish(Joy_ctrl)
 			self.pub_cmdVel.publish(Twist())
 			self.cancel_time = now_time
+
+	def execute_stop_command(self):
+		"""Execute stop command via robot interface service"""
+		try:
+			# Create stop command
+			command = RobotCommand()
+			command.command_type = "stop"
+
+			# Create service request
+			request = ExecuteCommand.Request()
+			request.command = command
+
+			# Send async request
+			if self.robot_command_client.service_is_ready():
+				future = self.robot_command_client.call_async(request)
+				future.add_done_callback(self.stop_command_callback)
+
+				# Triple beep for stop command
+				beep_msg = Bool()
+				for i in range(3):
+					beep_msg.data = True
+					self.pub_Buzzer.publish(beep_msg)
+					time.sleep(0.1)
+					beep_msg.data = False
+					self.pub_Buzzer.publish(beep_msg)
+					time.sleep(0.1)
+
+				self.get_logger().info("🛑 Stop command sent via B button")
+			else:
+				self.get_logger().warning("⚠️ Robot command service not ready")
+
+		except Exception as e:
+			self.get_logger().error(f"❌ Error executing stop command: {str(e)}")
+
+	def stop_command_callback(self, future):
+		"""Callback for stop command response"""
+		try:
+			response = future.result()
+			if response.success:
+				self.get_logger().info("✅ Stop command executed successfully")
+			else:
+				self.get_logger().warning(f"⚠️ Stop command failed: {response.result_message}")
+		except Exception as e:
+			self.get_logger().error(f"❌ Stop command callback error: {str(e)}")
 			
 def main():
 	rclpy.init()

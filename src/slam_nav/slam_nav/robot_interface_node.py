@@ -21,8 +21,6 @@ class RobotInterfaceNode(Node):
     def __init__(self):
         super().__init__('robot_interface_node')
         
-        # Robot identification
-        self.robot_id = "yahboomcar_x3_01"
 
         # Movement state tracking
         self.movement_active = False
@@ -53,14 +51,13 @@ class RobotInterfaceNode(Node):
         
         # Sensor data storage
         self.sensor_data = SensorData()
-        self.sensor_data.robot_id = self.robot_id
         self.sensor_data.camera_status = "unknown"
         self.sensor_data.battery_voltage = 0.0  # Initialize battery voltage
         
         # Publishing timer
         self.sensor_timer = self.create_timer(0.5, self.publish_sensor_data)   # 2Hz
         
-        self.get_logger().info(f'🤖 Robot Interface Node started - ID: {self.robot_id}')
+        self.get_logger().info('🤖 Robot Interface Node started')
         self.get_logger().info('🚪 Command Gateway Service: /robot/execute_command')
         self.get_logger().info('📡 Publishing sensor data for SLAM/Nav and external clients')
         
@@ -99,13 +96,7 @@ class RobotInterfaceNode(Node):
         """
         command = request.command
         
-        self.get_logger().info(f'🚪 Gateway: Received {command.command_type} from {command.source_node}')
-        
-        # Validate robot ID
-        if command.robot_id != self.robot_id:
-            response.success = False
-            response.result_message = f"Invalid robot ID: {command.robot_id}"
-            return response
+        self.get_logger().info(f'🚪 Gateway: Received {command.command_type}')
         
         try:
             # Execute command
@@ -171,9 +162,7 @@ class RobotInterfaceNode(Node):
             linear_speed = getattr(command, 'linear_speed', 0.2)
             if linear_speed <= 0:
                 linear_speed = 0.2
-                
-            duration = getattr(command, 'duration', 0.0)
-            
+
             # Calculate velocities
             vx = command.linear_x * linear_speed
             vy = command.linear_y * linear_speed
@@ -184,7 +173,7 @@ class RobotInterfaceNode(Node):
             self.stop_movement.clear()
             self.movement_thread = threading.Thread(
                 target=self._movement_worker,
-                args=(vx, vy, distance, duration)
+                args=(vx, vy, distance)
             )
             self.movement_active = True
             self.movement_thread.start()
@@ -223,9 +212,7 @@ class RobotInterfaceNode(Node):
             angular_speed = getattr(command, 'angular_speed', 0.5)
             if angular_speed <= 0:
                 angular_speed = 0.5
-                
-            duration = getattr(command, 'duration', 0.0)
-            
+
             # Convert to radians and determine direction
             angular_rad = math.radians(angular_deg)
             angular_velocity = angular_speed * math.copysign(1, angular_deg)
@@ -236,7 +223,7 @@ class RobotInterfaceNode(Node):
             self.stop_movement.clear()
             self.movement_thread = threading.Thread(
                 target=self._turn_worker,
-                args=(angular_velocity, angular_rad, duration)
+                args=(angular_velocity, angular_rad)
             )
             self.movement_active = True
             self.movement_thread.start()
@@ -272,7 +259,7 @@ class RobotInterfaceNode(Node):
             self.get_logger().error(f'❌ Stop command error: {str(e)}')
             return False
     
-    def _movement_worker(self, vx, vy, target_distance_m, max_duration):
+    def _movement_worker(self, vx, vy, target_distance_m):
         """Worker thread for odometry-based linear movement"""
         try:
             start_pose = self.current_pose
@@ -288,11 +275,6 @@ class RobotInterfaceNode(Node):
             self.cmd_vel_pub.publish(twist)
             
             while not self.stop_movement.is_set():
-                # Check duration limit
-                if max_duration > 0 and (time.time() - start_time) > max_duration:
-                    self.get_logger().info('⏰ Movement duration limit reached')
-                    break
-                
                 # Calculate distance traveled
                 if self.current_pose and start_pose:
                     dx = self.current_pose.position.x - start_pose.position.x
@@ -319,7 +301,7 @@ class RobotInterfaceNode(Node):
             self.cmd_vel_pub.publish(stop_twist)
             self.movement_active = False
     
-    def _turn_worker(self, angular_velocity, target_angle_rad, max_duration):
+    def _turn_worker(self, angular_velocity, target_angle_rad):
         """Worker thread for odometry-based rotational movement"""
         try:
             start_pose = self.current_pose
@@ -343,11 +325,6 @@ class RobotInterfaceNode(Node):
             self.cmd_vel_pub.publish(twist)
             
             while not self.stop_movement.is_set():
-                # Check duration limit
-                if max_duration > 0 and (time.time() - start_time) > max_duration:
-                    self.get_logger().info('⏰ Turn duration limit reached')
-                    break
-                
                 # Calculate angle turned
                 if self.current_pose:
                     current_yaw = get_yaw_from_quaternion(self.current_pose.orientation)

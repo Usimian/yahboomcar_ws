@@ -1,5 +1,7 @@
 # Robot Client Integration Guide
 
+**Last Updated:** September 02, 2025 - 11:58 AM EST
+
 ## Overview
 
 This guide provides complete integration information for controlling the Yahboom X3 robot and reading its sensors via ROS2. The robot uses a **simplified command interface** - you send movement commands via ROS2 services and receive sensor data via ROS2 topics.
@@ -46,7 +48,6 @@ string result_message              # Human-readable status/error message
 ### RobotCommand Message
 ```yaml
 # robot_msgs/msg/RobotCommand
-string robot_id              # Always "yahboomcar_x3_01"
 string command_type           # "move", "turn", or "stop"
 float64 linear_x              # Forward/backward direction (-1.0 to 1.0)
 float64 linear_y              # Left/right direction (-1.0 to 1.0)  
@@ -112,7 +113,6 @@ command.command_type = "stop"
 ### SensorData Message
 ```yaml
 # robot_msgs/msg/SensorData
-string robot_id              # "yahboomcar_x3_01"
 float64 battery_voltage       # Battery voltage (V)
 float64 cpu_temp             # CPU temperature (°C)
 
@@ -140,7 +140,7 @@ int64 timestamp_ns           # Timestamp (nanoseconds)
 # System Status
 # Manual robot command
 ros2 service call /robot/execute_command robot_msgs/srv/ExecuteCommand \
-  "{command: {robot_id: 'yahboomcar_x3_01', command_type: 'move', 
+  "{command: {command_type: 'move', 
   linear_x: 1.0, distance: 0.1, linear_speed: 0.1, source_node: 'test'}}"
 
 This guide provides everything needed to integrate with the robot system. The robot acts as a simple hardware interface - you send movement commands and receive sensor data. All AI processing (VILA, GPT-4V, custom models, etc.), path planning, and decision making happens on your client system.

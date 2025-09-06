@@ -1,4 +1,4 @@
-# Service to get battery voltage from the main driver
+# Service to get battery voltage from the main driver (used internally only)
 # Request - empty (no parameters needed)
 ---
 # Response

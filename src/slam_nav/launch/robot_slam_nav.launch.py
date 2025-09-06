@@ -101,9 +101,6 @@ def generate_launch_description():
         executable='robot_interface_node',
         name='robot_interface_node',
         output='screen',
-        parameters=[{
-            'robot_id': 'yahboomcar_x3_01',
-        }],
         arguments=['--ros-args', '--log-level', log_level]
     )
 
