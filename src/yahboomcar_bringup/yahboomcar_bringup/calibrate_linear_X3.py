@@ -8,7 +8,6 @@ from math import copysign, sqrt, pow
 #import time
 from rclpy.duration import Duration
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
-import PyKDL
 from math import pi
 from yahboomcar_bringup.transform_utils import *
 
@@ -80,15 +79,21 @@ class CalibrateLinear(Node):
                         )'''
             #self.position.x = trans.transform.translation.x
             #self.position.y = trans.transform.translation.y
-            self.position.x = self.get_position().transform.translation.x
-            self.position.y = self.get_position().transform.translation.y
+            current_pos = self.get_position()
+            if current_pos is None:
+                return  # Skip this iteration if transform not ready
+            self.position.x = current_pos.transform.translation.x
+            self.position.y = current_pos.transform.translation.y
             print("self.position.x: ",self.position.x)
             print("self.position.y: ",self.position.y)
-            distance = sqrt(pow((self.position.x - self.x_start), 2) +
-                                pow((self.position.y - self.y_start), 2))
-            distance *= self.odom_linear_scale_correction
-            print("distance: ",distance)
-            error = distance - self.test_distance
+            # Calculate signed distance based on direction
+            if self.direction:  # X-axis movement
+                signed_distance = (self.position.x - self.x_start) * self.odom_linear_scale_correction
+            else:  # Y-axis movement  
+                signed_distance = (self.position.y - self.y_start) * self.odom_linear_scale_correction
+            
+            print("signed_distance: ",signed_distance)
+            error = signed_distance - self.test_distance
             print("error: ",error)
             #start = time()
             if not self.start_test or abs(error) < self.tolerance:
@@ -109,8 +114,11 @@ class CalibrateLinear(Node):
         else:
             #self.position.x = trans.transform.translation.x
             #self.position.y = trans.transform.translation.y
-            self.x_start = self.get_position().transform.translation.x
-            self.y_start = self.get_position().transform.translation.y
+            start_pos = self.get_position()
+            if start_pos is None:
+                return  # Skip this iteration if transform not ready
+            self.x_start = start_pos.transform.translation.x
+            self.y_start = start_pos.transform.translation.y
             print("self.x_start: ",self.x_start)
             print("self.y_start:",self.y_start)
             self.cmd_vel.publish(Twist())
@@ -128,12 +136,11 @@ class CalibrateLinear(Node):
     def get_position(self):
          try:
             now = rclpy.time.Time()
-            trans = self.tf_buffer.lookup_transform(self.odom_frame,self.base_frame,now)   
-            return trans       
+            trans = self.tf_buffer.lookup_transform(self.odom_frame,self.base_frame,now)
+            return trans
          except (LookupException, ConnectivityException, ExtrapolationException):
             self.get_logger().info('transform not ready')
-            raise
-            return
+            return None
          
 def main():
     rclpy.init()

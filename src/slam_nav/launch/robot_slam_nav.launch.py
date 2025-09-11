@@ -75,7 +75,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(slam_nav_dir, 'launch', 'robot_bringup.launch.py')),
         launch_arguments={
-            'pub_odom_tf': 'false',  # EKF will provide odom->base_footprint
+            'pub_odom_tf': 'true',   # Enable base_node to publish odom->base_footprint TF
         }.items()
     )
 

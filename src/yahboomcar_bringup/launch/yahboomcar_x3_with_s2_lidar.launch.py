@@ -124,7 +124,7 @@ def generate_launch_description():
             'Prefix': '',
             'xlinear_limit': 1.0,
             'ylinear_limit': 1.0,
-            'angular_limit': 5.0
+            'angular_limit': 5.0,
         }]
     )
     
@@ -136,9 +136,6 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'pub_odom_tf': LaunchConfiguration('pub_odom_tf'),
-            'linear_scale_x': 1.0,
-            'linear_scale_y': 1.0,
-            'angular_scale': 1.0,
             'base_footprint_frame': 'base_footprint',  # Use base_footprint for REP-105 compliance
         }]
     )

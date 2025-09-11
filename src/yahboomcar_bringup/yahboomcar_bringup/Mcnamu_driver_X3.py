@@ -2,11 +2,12 @@
 # encoding: utf-8
 
 #public lib
-import sys
-import math
-import random
-import threading
+# import sys
+# import math
+# import random
+# import threading
 from math import pi
+import time
 from time import sleep
 from Rosmaster_Lib import Rosmaster
 
@@ -65,6 +66,22 @@ class yahboomcar_driver(Node):
 		self.declare_parameter('debug', False)
 		self.debug_enabled = self.get_parameter('debug').get_parameter_value().bool_value
 		print (f"Debug mode: {self.debug_enabled}")
+
+		# Load calibration factors from parameter file
+		self.declare_parameter('hardware_calibration.linear_x_cal_factor', 1.0)
+		self.declare_parameter('hardware_calibration.linear_y_cal_factor', 1.0)
+		self.declare_parameter('hardware_calibration.angular_cal_factor', 1.0)
+		self.declare_parameter('velocity_corrections.linear_velocity_correction', 1.52)
+		self.declare_parameter('velocity_corrections.angular_velocity_correction', 1.0)
+		
+		self.linear_x_cal_factor = self.get_parameter('hardware_calibration.linear_x_cal_factor').get_parameter_value().double_value
+		self.linear_y_cal_factor = self.get_parameter('hardware_calibration.linear_y_cal_factor').get_parameter_value().double_value
+		self.angular_cal_factor = self.get_parameter('hardware_calibration.angular_cal_factor').get_parameter_value().double_value
+		self.linear_velocity_correction = self.get_parameter('velocity_corrections.linear_velocity_correction').get_parameter_value().double_value
+		self.angular_velocity_correction = self.get_parameter('velocity_corrections.angular_velocity_correction').get_parameter_value().double_value
+		
+		self.get_logger().info(f"Calibration factors - Linear X: {self.linear_x_cal_factor:.3f}, Linear Y: {self.linear_y_cal_factor:.3f}, Angular: {self.angular_cal_factor:.3f}")
+		self.get_logger().info(f"Velocity corrections - Linear: {self.linear_velocity_correction:.3f}, Angular: {self.angular_velocity_correction:.3f}")
 		
 		# Note: IMU gyroscope bias correction removed - using wheel odometry for angular velocity instead
 
@@ -129,16 +146,54 @@ class yahboomcar_driver(Node):
 		self.last_cmd_vy = 0.0  
 		self.last_cmd_angular = 0.0
 		
+		# Calibrate IMU bias by averaging readings when stationary
+		self.get_logger().info("Calibrating IMU bias...")
+		bias_samples = []
+		for i in range(50):  # Take 50 samples over 0.5 seconds
+			gx, gy, gz = self.car.get_gyroscope_data()
+			bias_samples.append(gz)
+			time.sleep(0.01)
+		
+		self.imu_angular_bias = sum(bias_samples) / len(bias_samples)
+		self.get_logger().info(f"IMU angular bias calibrated: {self.imu_angular_bias:.3f} rad/s")
+		
+ 		# Hardware speed feedback system (better than raw encoders)
+		# The robot firmware provides processed velocity feedback that accounts for
+		# wheel dynamics, slip compensation, and motor characteristics
+		
 		self.get_logger().info("Yahboom X3 driver initialization complete")
+
+	def get_hardware_velocities(self):
+		"""Get actual velocities from hardware speed feedback"""
+		# Get wheel-based linear velocities (reliable)
+		vx, vy, vz_wheel = self.car.get_motion_data()
+		
+		# CRITICAL: Hardware velocity feedback is severely under-reporting
+		# Based on measurements: actual/reported ratios
+		# Linear: 0.62m actual / 0.408m reported = 1.52 (now loaded from parameter file)
+		vx_corrected = vx * self.linear_velocity_correction
+		vy_corrected = vy * self.linear_velocity_correction  
+		
+		# Use IMU angular velocity instead of unreliable wheel-based calculation
+		gx, gy, gz = self.car.get_gyroscope_data()
+		vz_imu = gz - self.imu_angular_bias  # IMU Z-axis angular velocity (yaw rate) with bias correction
+		
+		# Debug output to see what hardware is actually reporting
+		if abs(vx) > 0.01 or abs(vy) > 0.01 or abs(vz_wheel) > 0.01 or abs(vz_imu) > 0.01:
+			self.get_logger().info(f"Wheel velocities: vx={vx:.3f}, vy={vy:.3f}, vz_wheel={vz_wheel:.3f}")
+			self.get_logger().info(f"IMU angular: gz={gz:.3f} rad/s")
+			self.get_logger().info(f"Final: vx={vx_corrected:.3f}, vy={vy_corrected:.3f}, vz_imu={vz_imu:.3f}")
+		
+		return vx_corrected, vy_corrected, vz_imu
 
 	def cmd_vel_callback(self,msg):
         # Car motion control, subscriber callback function
 		if not isinstance(msg, Twist): return
-        # Send linear velocity and angular velocity
-		vx = msg.linear.x*1.0
+        # Apply calibration factors - SINGLE POINT OF CALIBRATION
+		vx = msg.linear.x * self.linear_x_cal_factor
         #vy = msg.linear.y/1000.0*180.0/3.1416    #Radian system
-		vy = msg.linear.y*1.0
-		angular = msg.angular.z*1.0     # wait for chang
+		vy = msg.linear.y * self.linear_y_cal_factor
+		angular = msg.angular.z * self.angular_cal_factor
 		self.car.set_car_motion(vx, vy, angular)
 		
 		# FIXED: Store commanded velocities for velocity feedback
@@ -236,9 +291,12 @@ class yahboomcar_driver(Node):
 			
 			# FIXED: Publish commanded velocities instead of unreliable hardware feedback
 			# This ensures proper angular velocity feedback for odometry and SLAM
-			twist.linear.x = self.last_cmd_vx
-			twist.linear.y = self.last_cmd_vy
-			twist.angular.z = self.last_cmd_angular  # Use commanded angular velocity for reliable feedback
+			# Use hardware speed feedback for accurate odometry
+			# This provides actual measured velocities from the robot's firmware
+			hardware_vx, hardware_vy, hardware_vz = self.get_hardware_velocities()
+			twist.linear.x = hardware_vx
+			twist.linear.y = hardware_vy
+			twist.angular.z = hardware_vz
 			
 			self.velPublisher.publish(twist)
 			self.imuPublisher.publish(imu)

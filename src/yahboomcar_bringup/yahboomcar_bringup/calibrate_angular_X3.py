@@ -31,7 +31,7 @@ class Calibrateangular(Node):
         self.declare_parameter('tolerance',1.5)
         self.tolerance = self.get_parameter('tolerance').get_parameter_value().double_value
         
-        self.declare_parameter('odom_angular_scale_correction',0.75)
+        self.declare_parameter('odom_angular_scale_correction',1.0)
         self.odom_angular_scale_correction = self.get_parameter('odom_angular_scale_correction').get_parameter_value().double_value
         
         self.declare_parameter('start_test',False)

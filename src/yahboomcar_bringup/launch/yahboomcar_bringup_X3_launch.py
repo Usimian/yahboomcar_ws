@@ -61,21 +61,29 @@ def generate_launch_description():
         arguments=['-d', LaunchConfiguration('rvizconfig')],
     )
 
+    # Robot calibration parameter file
+    calibration_config = os.path.join(              
+        get_package_share_directory('yahboomcar_bringup'),
+        'config',
+        'robot_calibration.yaml'
+    )
+
     driver_node = Node(
         package='yahboomcar_bringup',
         executable='Mcnamu_driver_X3',
+        parameters=[calibration_config]
     )
 
     base_node = Node(
         package='yahboomcar_base_node',
         executable='base_node_X3',
         # 当使用ekf融合时，该tf有ekf发布
-        parameters=[{
-            'pub_odom_tf': LaunchConfiguration('pub_odom_tf'),
-            'linear_scale_x': 1.0,
-            'linear_scale_y': 1.0,
-            'angular_scale': 1.0,
-        }]
+        parameters=[
+            calibration_config,
+            {
+                'pub_odom_tf': LaunchConfiguration('pub_odom_tf'),
+            }
+        ]
     )
 
     imu_filter_config = os.path.join(              

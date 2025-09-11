@@ -122,10 +122,7 @@ def generate_launch_description():
         name='base_node',
         output='screen',
         parameters=[{
-            'pub_odom_tf': pub_odom_tf,  # Use LaunchConfiguration parameter 
-            'linear_scale_x': 1.0,
-            'linear_scale_y': 1.0,
-            'angular_scale': 1.0,  # FIXED: Reverted to 1.0 since lidar inversion fix resolves the orientation issue
+            'pub_odom_tf': pub_odom_tf,  # Use LaunchConfiguration parameter
             'base_footprint_frame': 'base_footprint',  # Use base_footprint for REP-105 compliance
         }]
     )

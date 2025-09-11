@@ -34,7 +34,7 @@ def generate_launch_description():
             'debug_out_file': '/path/to/debug/file.txt',
             'permit_corrected_publication': False,
             'publish_acceleration': False,
-            'publish_tf': False,  # FIXED: Disable TF publishing from EKF (has broken rotation data)
+            'publish_tf': False,  # Disable EKF TF publishing, use base_node instead
             'map_frame': 'map',
             
             # Odometry configuration - wheel encoders for position and velocities
