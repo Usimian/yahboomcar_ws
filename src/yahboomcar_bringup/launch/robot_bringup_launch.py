@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 
 """
-Launch file for yahboomcar X3 with S2 lidar
-This launch file brings up the complete robot system including:
-- Robot hardware drivers
-- Base node for odometry and transforms
+Robot Bringup Launch File for Yahboom X3
+Brings up the core robot hardware system with calibration parameters.
+This launch file uses robot_calibration.yaml and focuses only on robot hardware.
+
+Includes:
+- Robot hardware driver (Mcnamu_driver_X3) with calibration parameters
+- Base node for odometry and transforms with calibration parameters  
 - IMU filtering
-- EKF for sensor fusion
-- S2 lidar
+- EKF sensor fusion
 - Robot state publisher
 - Joint state publisher
 - Joystick control
+
+Does NOT include:
+- Camera (handled by higher-level launch files)
+- SLAM components (handled by higher-level launch files)
 """
 
 import os
@@ -26,14 +32,13 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     # Print robot configuration
-    if not os.environ.get("PRINTED"):
-        os.environ["PRINTED"] = "1"
-        print("---------------------robot_type = X3 with S2 lidar---------------------")
+    if not os.environ.get("PRINTED_ROBOT_BRINGUP"):
+        os.environ["PRINTED_ROBOT_BRINGUP"] = "1"
+        print("---------------------Yahboom X3 Robot Bringup with Calibration---------------------")
     
     # Get package paths
     urdf_tutorial_path = get_package_share_path('yahboomcar_description')
     default_model_path = urdf_tutorial_path / 'urdf/yahboomcar_X3_simple.urdf'
-    default_rviz_config_path = urdf_tutorial_path / 'rviz/yahboomcar.rviz'
     
     # Launch arguments
     gui_arg = DeclareLaunchArgument(
@@ -49,28 +54,32 @@ def generate_launch_description():
         description='Absolute path to robot urdf file'
     )
     
-    rviz_arg = DeclareLaunchArgument(
-        name='rvizconfig', 
-        default_value=str(default_rviz_config_path),
-        description='Absolute path to rviz config file'
-    )
-    
     pub_odom_tf_arg = DeclareLaunchArgument(
         'pub_odom_tf', 
         default_value='false',
         description='Whether to publish the tf from the original odom to the base_footprint'
     )
     
-    use_rviz_arg = DeclareLaunchArgument(
-        'use_rviz', 
-        default_value='false',
-        description='Whether to start RViz'
-    )
-    
+
     # Robot description
     robot_description = ParameterValue(
         Command(['xacro ', LaunchConfiguration('model')]),
         value_type=str
+    )
+    
+    # === ROBOT CALIBRATION PARAMETERS ===
+    
+    # Robot calibration parameter file - THIS IS THE KEY ADDITION
+    calibration_config = os.path.join(              
+        get_package_share_directory('yahboomcar_bringup'),
+        'config',
+        'robot_calibration.yaml'
+    )
+    
+    odometry_config = os.path.join(
+        get_package_share_directory('yahboomcar_base_node'),
+        'config',
+        'odometry_scaling.yaml'
     )
     
     # === ROBOT NODES ===
@@ -100,44 +109,27 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('gui'))
     )
     
-    # RViz (optional)
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        output='screen',
-        arguments=['-d', LaunchConfiguration('rvizconfig')],
-        condition=IfCondition(LaunchConfiguration('use_rviz'))
-    )
+    # === HARDWARE DRIVERS WITH CALIBRATION ===
     
-    # === HARDWARE DRIVERS ===
-    
-    # Main robot driver
+    # Main robot driver - USES CALIBRATION PARAMETERS
     driver_node = Node(
         package='yahboomcar_bringup',
         executable='Mcnamu_driver_X3',
         name='yahboomcar_driver',
         output='screen',
-        parameters=[{
-            'car_type': 'X3',
-            'imu_link': 'imu_link',
-            'Prefix': '',
-            'xlinear_limit': 1.0,
-            'ylinear_limit': 1.0,
-            'angular_limit': 5.0,
-        }]
+        parameters=[calibration_config]  # Load calibration parameters from YAML
     )
     
-    # Base node for odometry and transforms
+    # Base node for odometry and transforms - USES CALIBRATION PARAMETERS
     base_node = Node(
         package='yahboomcar_base_node',
         executable='base_node_X3',
         name='base_node',
         output='screen',
-        parameters=[{
-            'pub_odom_tf': LaunchConfiguration('pub_odom_tf'),
-            'base_footprint_frame': 'base_footprint',  # Use base_footprint for REP-105 compliance
-        }]
+        parameters=[
+            odometry_config,     # Load odometry scaling parameters
+            {'pub_odom_tf': LaunchConfiguration('pub_odom_tf')}  # TF publishing control
+        ]
     )
     
     # === IMU AND SENSOR FUSION ===
@@ -149,14 +141,14 @@ def generate_launch_description():
         'imu_filter_param.yaml'
     )
     
-    # IMU filter node
-    imu_filter_node = Node(
-        package='imu_filter_madgwick',
-        executable='imu_filter_madgwick_node',
-        name='imu_filter',
-        output='screen',
-        parameters=[imu_filter_config]
-    )
+    # IMU filter node - DISABLED due to gyroscope bias issues
+    # imu_filter_node = Node(
+    #     package='imu_filter_madgwick',
+    #     executable='imu_filter_madgwick_node',
+    #     name='imu_filter',
+    #     output='screen',
+    #     parameters=[imu_filter_config]
+    # )
     
     # EKF for sensor fusion
     ekf_node = IncludeLaunchDescription(
@@ -168,26 +160,23 @@ def generate_launch_description():
     
     # === LIDAR ===
     
-    # S2 lidar node - Configure to use laser_link frame to match URDF
-    lidar_node = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            os.path.join(get_package_share_directory('sllidar_ros2'), 'launch'),
-            '/sllidar_s2_launch.py'
-        ]),
-        launch_arguments={
-            'frame_id': 'laser_link',  # Use laser_link to match URDF, eliminating need for static transform
-            'inverted': 'true'         # Invert scan data to match physical laser orientation
-        }.items()
+    # S2 lidar node - Simple configuration to get full 360° data
+    lidar_node = Node(
+        package='sllidar_ros2',
+        executable='sllidar_node',
+        name='sllidar_node',
+        output='screen',
+        parameters=[{
+            'channel_type': 'serial',
+            'serial_port': '/dev/rplidar',
+            'serial_baudrate': 1000000,
+            'frame_id': 'laser_link',
+            'inverted': False,
+            'angle_compensate': True,
+            'scan_mode': 'Standard',     # Try Standard mode instead of DenseBoost
+            'use_sim_time': False        # Explicitly set to false for system time usage
+        }]
     )
-    
-    # REMOVED: Conflicting static transform publisher - URDF should be the single source of truth
-    # The robot_state_publisher will handle all static transforms from URDF
-    # laser_tf_node = Node(
-    #     package='tf2_ros',
-    #     executable='static_transform_publisher',
-    #     name='base_to_laser_tf',
-    #     arguments=['0.0435', '5.258E-05', '0.11', '3.14', '0', '0', 'base_link', 'laser']
-    # )
     
     # === CONTROL ===
     
@@ -212,29 +201,25 @@ def generate_launch_description():
         # Launch arguments
         gui_arg,
         model_arg,
-        rviz_arg,
         pub_odom_tf_arg,
-        use_rviz_arg,
         
         # Robot description and visualization
         robot_state_publisher_node,
         joint_state_publisher_node,
         joint_state_publisher_gui_node,
-        rviz_node,
         
-        # Hardware drivers
+        # Hardware drivers WITH CALIBRATION
         driver_node,
         base_node,
         
         # IMU and sensor fusion
-        imu_filter_node,
+        # imu_filter_node,  # Disabled due to gyroscope bias
         ekf_node,
         
         # Lidar
         lidar_node,
-        # laser_tf_node, # Removed as per edit hint
         
         # Control
         yahboom_joy_node,
         joy_node
-    ]) 
+    ])

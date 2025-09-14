@@ -32,13 +32,9 @@ class RobotExercise(Node):
         self.is_moving = False
         
         # Movement correction factors (system defaults)
-        self.hardware_linear_x_cal = 1.0     # Hardware driver calibration
-        self.hardware_linear_y_cal = 1.0     # Hardware driver calibration
-        self.hardware_angular_cal = 1.0      # Hardware driver calibration
-        self.odom_linear_scale_x = 1.0       # Odometry scale factor
-        self.odom_linear_scale_y = 1.0       # Odometry scale factor
-        self.odom_angular_scale = 1.0        # Odometry scale factor
-        self.hardware_velocity_correction = 1.52  # Hardware velocity under-reporting correction
+        self.linear_x_cal = 1.0     # Linear X calibration factor
+        self.linear_y_cal = 1.0     # Linear Y calibration factor
+        self.angular_z_cal = 1.0    # Angular Z calibration factor
         
         # Try to get actual parameters from the system (if available)
         self.get_correction_factors()
@@ -69,28 +65,17 @@ class RobotExercise(Node):
             self.get_logger().debug("Loading movement correction factors from parameter file...")
             
             # Declare parameters from robot_calibration.yaml
-            self.declare_parameter('hardware_calibration.linear_x_cal_factor', 1.0)
-            self.declare_parameter('hardware_calibration.linear_y_cal_factor', 1.0)
-            self.declare_parameter('hardware_calibration.angular_cal_factor', 1.0)
-            self.declare_parameter('odometry_scaling.linear_scale_x', 1.0)
-            self.declare_parameter('odometry_scaling.linear_scale_y', 1.0)
-            self.declare_parameter('odometry_scaling.angular_scale', 1.0)
-            self.declare_parameter('velocity_corrections.linear_velocity_correction', 1.52)
-            self.declare_parameter('velocity_corrections.angular_velocity_correction', 1.0)
+            self.declare_parameter('calibration.linear_x_factor', 1.0)
+            self.declare_parameter('calibration.linear_y_factor', 1.0)
+            self.declare_parameter('calibration.angular_z_factor', 1.0)
             
             # Load parameters
-            self.hardware_linear_x_cal = self.get_parameter('hardware_calibration.linear_x_cal_factor').get_parameter_value().double_value
-            self.hardware_linear_y_cal = self.get_parameter('hardware_calibration.linear_y_cal_factor').get_parameter_value().double_value
-            self.hardware_angular_cal = self.get_parameter('hardware_calibration.angular_cal_factor').get_parameter_value().double_value
-            self.odom_linear_scale_x = self.get_parameter('odometry_scaling.linear_scale_x').get_parameter_value().double_value
-            self.odom_linear_scale_y = self.get_parameter('odometry_scaling.linear_scale_y').get_parameter_value().double_value
-            self.odom_angular_scale = self.get_parameter('odometry_scaling.angular_scale').get_parameter_value().double_value
-            self.hardware_velocity_correction = self.get_parameter('velocity_corrections.linear_velocity_correction').get_parameter_value().double_value
+            self.linear_x_cal = self.get_parameter('calibration.linear_x_factor').get_parameter_value().double_value
+            self.linear_y_cal = self.get_parameter('calibration.linear_y_factor').get_parameter_value().double_value
+            self.angular_z_cal = self.get_parameter('calibration.angular_z_factor').get_parameter_value().double_value
             
             self.get_logger().debug("Movement correction factors loaded successfully from parameter file")
-            self.get_logger().debug(f"Hardware calibration: X={self.hardware_linear_x_cal:.3f}, Y={self.hardware_linear_y_cal:.3f}, Angular={self.hardware_angular_cal:.3f}")
-            self.get_logger().debug(f"Odometry scaling: X={self.odom_linear_scale_x:.3f}, Y={self.odom_linear_scale_y:.3f}, Angular={self.odom_angular_scale:.3f}")
-            self.get_logger().debug(f"Velocity correction: {self.hardware_velocity_correction:.3f}x")
+            self.get_logger().debug(f"Calibration factors: X={self.linear_x_cal:.3f}, Y={self.linear_y_cal:.3f}, Angular={self.angular_z_cal:.3f}")
             
         except Exception as e:
             self.get_logger().warning(f"Could not load correction factors from parameters: {str(e)}")
@@ -288,21 +273,10 @@ class RobotExercise(Node):
         else:
             print("Current Position:   [No odometry data]")
         print("-"*70)
-        print("MOVEMENT CORRECTION FACTORS:")
-        print(f"Hardware Driver Calibration:")
-        print(f"  • Linear X Factor:     {self.hardware_linear_x_cal:.3f}")
-        print(f"  • Linear Y Factor:     {self.hardware_linear_y_cal:.3f}")
-        print(f"  • Angular Factor:      {self.hardware_angular_cal:.3f}")
-        print(f"Odometry Scale Factors:")
-        print(f"  • Linear X Scale:      {self.odom_linear_scale_x:.3f}")
-        print(f"  • Linear Y Scale:      {self.odom_linear_scale_y:.3f}")
-        print(f"  • Angular Scale:       {self.odom_angular_scale:.3f}")
-        print(f"Hardware Velocity Correction:")
-        print(f"  • Velocity Correction: {self.hardware_velocity_correction:.3f}x (compensates under-reporting)")
-        print(f"Combined Effective Multipliers:")
-        print(f"  • Linear X Effective:  {self.hardware_linear_x_cal * self.odom_linear_scale_x:.3f}")
-        print(f"  • Linear Y Effective:  {self.hardware_linear_y_cal * self.odom_linear_scale_y:.3f}")
-        print(f"  • Angular Effective:   {self.hardware_angular_cal * self.odom_angular_scale:.3f}")
+        print("CALIBRATION FACTORS:")
+        print(f"  • Linear X Factor:     {self.linear_x_cal:.3f}")
+        print(f"  • Linear Y Factor:     {self.linear_y_cal:.3f}")
+        print(f"  • Angular Z Factor:    {self.angular_z_cal:.3f}")
         print("="*70)
     
     def print_help(self):

@@ -70,10 +70,10 @@ def generate_launch_description():
         description='Whether to start RViz')
 
     # === ROBOT BRINGUP ===
-    # Include the robot bringup launch file (hardware drivers, sensors, etc.)
+    # Include the yahboomcar_bringup launch file with calibration parameters
     robot_bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(slam_nav_dir, 'launch', 'robot_bringup.launch.py')),
+            os.path.join(get_package_share_directory('yahboomcar_bringup'), 'launch', 'robot_bringup_launch.py')),
         launch_arguments={
             'pub_odom_tf': 'true',   # Enable base_node to publish odom->base_footprint TF
         }.items()

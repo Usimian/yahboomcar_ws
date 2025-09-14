@@ -204,7 +204,7 @@ class CalibrationTest(Node):
         for rec in recommendations:
             print(rec)
 
-        print("\nAdd these to your base_node parameters in robot_bringup.launch.py")
+        print("\nAdd these to your base_node parameters in robot_bringup_launch.py")
         print("Example:")
         print("  'linear_scale_x': 1.0 * forward_scale,")
         print("  'linear_scale_y': 1.0 * strafe_scale,")

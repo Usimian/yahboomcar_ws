@@ -45,7 +45,6 @@ class OdomPublisher:public rclcpp ::Node
    double linear_velocity_x_ = 0.0;
    double linear_velocity_y_ = 0.0;
    double angular_velocity_z_ = 0.0;
-   double wheelbase_ = 0.25;
    bool pub_odom_tf_ = false;
    rclcpp::Time last_vel_time_  ;
    std::string odom_frame = "odom";
@@ -57,7 +56,6 @@ class OdomPublisher:public rclcpp ::Node
         // Initialize time tracking
         last_vel_time_ = this->get_clock()->now();
             
-            this->declare_parameter<double>("wheelbase",0.25);
             this->declare_parameter<std::string>("odom_frame","odom");
             this->declare_parameter<std::string>("base_footprint_frame","base_footprint"); 
             this->declare_parameter<double>("linear_scale_x",1.0);     // No scaling - calibration applied in hardware driver
@@ -68,9 +66,6 @@ class OdomPublisher:public rclcpp ::Node
             this->get_parameter<double>("linear_scale_x",linear_scale_x_);
             this->get_parameter<double>("linear_scale_y",linear_scale_y_);
             this->get_parameter<double>("angular_scale",angular_scale_);
-            RCLCPP_INFO(this->get_logger(), "Received parameters - linear_scale_x: %f, linear_scale_y: %f, angular_scale: %f", 
-           linear_scale_x_, linear_scale_y_, angular_scale_);
-            this->get_parameter<double>("wheelbase",wheelbase_);
             this->get_parameter<bool>("pub_odom_tf",pub_odom_tf_);
             this->get_parameter<std::string>("odom_frame",odom_frame);
             this->get_parameter<std::string>("base_footprint_frame",base_footprint_frame);
@@ -136,8 +131,6 @@ class OdomPublisher:public rclcpp ::Node
 	  	      odom.twist.covariance[35] = 0.0001;
 	  	      
 	  	      odom_publisher_->publish(odom);
-	  	      
-	  	      // No TF publishing since we're not tracking position
 	  	  }
 	  	  
 	  	  void handle_vel(const std::shared_ptr<geometry_msgs::msg::Twist > msg)
@@ -165,16 +158,8 @@ class OdomPublisher:public rclcpp ::Node
 				// Update heading from actual angular velocity
     			double delta_heading = angular_velocity_z_ * vel_dt_ * angular_scale_;
 				heading_ += delta_heading;
-				
-				// Debug output for any movement
-				if (abs(delta_x) > 0.001 || abs(delta_y) > 0.001) {
-					RCLCPP_INFO(this->get_logger(), "ACTUAL vel integration: vx=%.3f, vy=%.3f, dt=%.3f, dx=%.6f, dy=%.6f, total_x=%.3f, total_y=%.3f", 
-						linear_velocity_x_, linear_velocity_y_, vel_dt_, delta_x, delta_y, x_pos_, y_pos_);
-				}
 			}
-    		// Odometry publishing is handled by the timer
 	  	  }
-
 };
 
 

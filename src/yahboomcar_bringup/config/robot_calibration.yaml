@@ -1,70 +1,72 @@
 # Yahboom X3 Robot Calibration Parameters
 # This file contains all movement correction factors and calibration constants
-# Last updated: September 11, 2025
+# Last updated: September 12, 2025
+# ROS2 compliant parameter file format
 
-# Hardware Driver Calibration Factors
-# These are applied in the hardware driver (Mcnamu_driver_X3.py) to cmd_vel commands
-hardware_calibration:
-  linear_x_cal_factor: 1.0      # Linear X velocity calibration factor
-  linear_y_cal_factor: 1.0      # Linear Y velocity calibration factor  
-  angular_cal_factor: 1.0       # Angular Z velocity calibration factor
+# Universal parameters that apply to all nodes using wildcard
+/**:
+  ros__parameters:
+    # Robot Calibration Factors - SINGLE SOURCE OF TRUTH
+    # These are the ONLY calibration factors needed for accurate movement
+    calibration:
+      linear_x_factor: 0.658        # Linear X movement calibration factor
+      linear_y_factor: 0.476        # Linear Y movement calibration factor
+      angular_z_factor: 1.000       # Angular Z rotation calibration factor
+    
+    # Movement Limits and Safety Parameters
+    movement_limits:
+      max_linear_velocity: 1.0     # Maximum linear velocity (m/s)
+      max_angular_velocity: 5.0    # Maximum angular velocity (rad/s)
+      linear_x_limit: 1.0          # Linear X velocity limit
+      linear_y_limit: 1.0          # Linear Y velocity limit
+      angular_limit: 5.0           # Angular velocity limit
 
-# Odometry Scale Factors
-# These are applied in the base_node (base_node_X3.cpp) for odometry calculations
-odometry_scaling:
-  linear_scale_x: 1.0           # Odometry linear X scale factor
-  linear_scale_y: 1.0           # Odometry linear Y scale factor
-  angular_scale: 1.0            # Odometry angular Z scale factor
+    # Calibration Test Parameters
+    # Used by calibration test programs for determining correction factors
+    calibration_test:
+      test_distance: 1.0           # Default test distance (m)
+      test_angle: 90.0             # Default test angle (degrees)
+      test_speed: 0.5              # Default test speed (m/s)
+      tolerance: 0.03              # Tolerance for calibration tests (m or rad)
+      timeout: 10.0                # Movement timeout (seconds)
 
-# Hardware Velocity Feedback Corrections
-# These correct for hardware under-reporting of actual velocities
-velocity_corrections:
-  linear_velocity_correction: 1.52    # Hardware under-reports linear velocity by this factor
-  angular_velocity_correction: 1.0    # Angular velocity correction (IMU-based, more accurate)
-  
-  # Explanation: Hardware encoder feedback severely under-reports actual movement
-  # Based on measurements: 0.62m actual / 0.408m reported = 1.52x correction needed
-  # This is applied in get_hardware_velocities() method
+    # IMU Bias Correction
+    # Gyroscope bias correction for angular velocity measurements
+    imu_corrections:
+      angular_bias_correction: 0.0  # IMU angular bias correction (rad/s)
+      use_imu_for_angular: true     # Use IMU instead of wheel odometry for angular velocity
 
-# Movement Limits and Safety Parameters
-movement_limits:
-  max_linear_velocity: 1.0     # Maximum linear velocity (m/s)
-  max_angular_velocity: 5.0    # Maximum angular velocity (rad/s)
-  linear_x_limit: 1.0          # Linear X velocity limit
-  linear_y_limit: 1.0          # Linear Y velocity limit
-  angular_limit: 5.0           # Angular velocity limit
+    # Robot Physical Constants
+    physical_constants:
+      wheelbase: 0.160             # Distance between wheels (m)
+      wheel_radius: 0.032          # Wheel radius (m)
+      robot_width: 0.200           # Robot width - including wheels (m)
+      robot_length: 0.240          # Robot length (m)
+      robot_height: 0.24           # Robot height (m)
 
-# Calibration Test Parameters
-# Used by calibration test programs for determining correction factors
-calibration_test:
-  test_distance: 1.0           # Default test distance (m)
-  test_angle: 90.0             # Default test angle (degrees)
-  test_speed: 0.5              # Default test speed (m/s)
-  tolerance: 0.03              # Tolerance for calibration tests (m or rad)
-  timeout: 10.0                # Movement timeout (seconds)
+    # Debug and Logging Settings
+    debug:
+      enable_velocity_debug: false  # Enable detailed velocity logging
+      enable_calibration_debug: false  # Enable calibration debug output
+      log_frequency: 10.0          # Debug log frequency (Hz)
 
-# IMU Bias Correction
-# Gyroscope bias correction for angular velocity measurements
-imu_corrections:
-  angular_bias_correction: 0.0  # IMU angular bias correction (rad/s)
-  use_imu_for_angular: true     # Use IMU instead of wheel odometry for angular velocity
+    # Communication Settings
+    communication:
+      serial_port: "/dev/ttyUSB0"  # Serial port for X3 robot
+      baud_rate: 115200            # Serial communication baud rate
+      timeout: 1.0                 # Serial communication timeout (seconds)
 
-# Robot Physical Constants
-physical_constants:
-  wheelbase: 0.160             # Distance between wheels (m)
-  wheel_radius: 0.032          # Wheel radius (m)
-  robot_width: 0.200           # Robot width - including wheels (m)
-  robot_length: 0.240          # Robot length (m)
-  robot_height: 0.24           # Robot height (m)
+    # Robot-specific parameters (for driver node compatibility)
+    car_type: 'X3'
+    imu_link: 'imu_link'
+    Prefix: ''
+    xlinear_limit: 1.0
+    ylinear_limit: 1.0
+    angular_limit: 5.0
+    debug: false
 
-# Debug and Logging Settings
-debug:
-  enable_velocity_debug: false  # Enable detailed velocity logging
-  enable_calibration_debug: false  # Enable calibration debug output
-  log_frequency: 10.0          # Debug log frequency (Hz)
-
-# Communication Settings
-communication:
-  serial_port: "/dev/ttyUSB0"  # Serial port for X3 robot
-  baud_rate: 115200            # Serial communication baud rate
-  timeout: 1.0                 # Serial communication timeout (seconds)
+    # Base node specific parameters
+    base_footprint_frame: 'base_footprint'
+    odom_frame: 'odom'
+    wheelbase: 0.160
+    pub_odom_tf: false

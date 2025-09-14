@@ -131,7 +131,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav robot_slam_nav.launch.py"
+                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav robot_slam_nav_launch.py"
             ],
             "group": "test",
             "presentation": {
@@ -150,7 +150,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch slam_nav robot_bringup.launch.py"
+                "source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch yahboomcar_bringup robot_bringup_launch.py"
             ],
             "group": "test",
             "presentation": {
@@ -286,6 +286,7 @@
                 "auto_drive",
                 "laserscan_to_point_publisher",
                 "yahboom_app_save_map",
+                "realsense-ros",
                 "slam_nav",
                 "robot_ros2_bridge",
                 "yahboomcar_astra",

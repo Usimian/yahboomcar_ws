@@ -15,7 +15,7 @@ This package provides comprehensive SLAM (Simultaneous Localization and Mapping)
 ```
 slam_nav/
 ├── launch/
-│   ├── robot_bringup.launch.py     # Robot hardware and sensors only
+│   ├── robot_bringup_launch.py     # Robot hardware and sensors only
 │   ├── slam_nav.launch.py          # Full SLAM + Navigation with RViz
 │   ├── slam_nav_headless.launch.py # Full SLAM + Navigation without RViz
 │   └── localization_nav.launch.py  # Navigation with existing map
@@ -65,7 +65,7 @@ ros2 launch slam_nav localization_nav.launch.py map:=/path/to/your/map.yaml
 To launch just the robot hardware and sensors:
 
 ```bash
-ros2 launch slam_nav robot_bringup.launch.py
+ros2 launch slam_nav robot_bringup_launch.py
 ```
 
 ### 4. Headless Operation
@@ -167,7 +167,7 @@ ros2 launch slam_nav slam_nav.launch.py use_rviz:=false slam:=True
 ros2 launch slam_nav localization_nav.launch.py map:=/home/user/my_map.yaml
 ```
 
-#### robot_bringup.launch.py
+#### robot_bringup_launch.py
 
 | Argument | Default | Description |
 |----------|---------|-------------|
