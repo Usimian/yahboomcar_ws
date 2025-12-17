@@ -15,8 +15,10 @@ Includes:
 - Joystick control
 
 Does NOT include:
-- Camera (handled by higher-level launch files)
 - SLAM components (handled by higher-level launch files)
+
+Optionally includes:
+- Intel RealSense D435i camera (controlled by enable_camera argument)
 """
 
 import os
@@ -55,12 +57,17 @@ def generate_launch_description():
     )
     
     pub_odom_tf_arg = DeclareLaunchArgument(
-        'pub_odom_tf', 
+        'pub_odom_tf',
         default_value='false',
         description='Whether to publish the tf from the original odom to the base_footprint'
     )
-    
 
+    enable_camera_arg = DeclareLaunchArgument(
+        'enable_camera',
+        default_value='true',
+        description='Enable Intel RealSense D435i camera'
+    )
+    
     # Robot description
     robot_description = ParameterValue(
         Command(['xacro ', LaunchConfiguration('model')]),
@@ -195,30 +202,55 @@ def generate_launch_description():
         name='joy_node',
         output='screen'
     )
-    
+
+    # === CAMERA (OPTIONAL) ===
+
+    # RealSense camera configuration file
+    realsense_config = os.path.join(
+        get_package_share_directory('slam_nav'),
+        'config',
+        'realsense_params.yaml'
+    )
+
+    # RealSense D435i camera node
+    camera_node = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            os.path.join(get_package_share_directory('realsense2_camera'), 'launch'),
+            '/rs_launch.py'
+        ]),
+        launch_arguments={
+            'config_file': realsense_config,
+        }.items(),
+        condition=IfCondition(LaunchConfiguration('enable_camera'))
+    )
+
     # Return launch description
     return LaunchDescription([
         # Launch arguments
         gui_arg,
         model_arg,
         pub_odom_tf_arg,
-        
+        enable_camera_arg,
+
         # Robot description and visualization
         robot_state_publisher_node,
         joint_state_publisher_node,
         joint_state_publisher_gui_node,
-        
+
         # Hardware drivers WITH CALIBRATION
         driver_node,
         base_node,
-        
+
         # IMU and sensor fusion
         # imu_filter_node,  # Disabled due to gyroscope bias
         ekf_node,
-        
+
         # Lidar
         lidar_node,
-        
+
+        # Camera (optional)
+        camera_node,
+
         # Control
         yahboom_joy_node,
         joy_node

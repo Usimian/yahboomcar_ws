@@ -6,7 +6,8 @@ Brings up the complete robot system with SLAM mapping
 This is the ONLY launch file needed to run the robot system.
 
 Includes:
-- Complete robot hardware system (drivers, sensors, lidar, camera)
+- Complete robot hardware system (drivers, sensors, lidar)
+- Intel RealSense D435i camera (depth, color, point cloud)
 - SLAM Toolbox for persistent mapping
 - EKF sensor fusion and localization
 
@@ -75,7 +76,8 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('yahboomcar_bringup'), 'launch', 'robot_bringup_launch.py')),
         launch_arguments={
-            'pub_odom_tf': 'true',   # Enable base_node to publish odom->base_footprint TF
+            'pub_odom_tf': 'true',      # Enable base_node to publish odom->base_footprint TF
+            'enable_camera': 'true',    # Enable Intel RealSense D435i camera
         }.items()
     )
 
