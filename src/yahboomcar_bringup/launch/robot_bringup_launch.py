@@ -220,6 +220,8 @@ def generate_launch_description():
         ]),
         launch_arguments={
             'config_file': realsense_config,
+            'camera_name': 'camera',           # Camera name
+            'camera_namespace': '',            # Empty namespace to avoid /camera/camera/ double prefix
         }.items(),
         condition=IfCondition(LaunchConfiguration('enable_camera'))
     )

@@ -30,8 +30,8 @@
     pointcloud.enable: true
     
     # === FRAME IDS ===
-    base_frame_id: "camera_realsense_camera_link"
-    depth_frame_id: "camera_depth_frame"  
+    base_frame_id: "camera_link"
+    depth_frame_id: "camera_depth_frame"
     color_frame_id: "camera_color_frame"
     depth_optical_frame_id: "camera_depth_optical_frame"
     color_optical_frame_id: "camera_color_optical_frame"

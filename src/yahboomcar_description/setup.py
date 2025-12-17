@@ -24,6 +24,7 @@ setup(
     maintainer_email='nx-ros2@todo.todo',
     description='TODO: Package description',
     license='TODO: License declaration',
+    python_requires='>=3.12',  # Jazzy requirement
     extras_require={
         "test": ["pytest"],
     },

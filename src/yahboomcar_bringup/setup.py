@@ -21,8 +21,9 @@ setup(
     zip_safe=True,
     maintainer='nx-ros2',
     maintainer_email='nx-ros2@todo.todo',
-    description='TODO: Package description',
+    description='Yahboomcar robot bringup and hardware drivers',
     license='TODO: License declaration',
+    python_requires='>=3.12',  # Jazzy requirement
     entry_points={
         'console_scripts': [
             'Mcnamu_driver_X3 = yahboomcar_bringup.Mcnamu_driver_X3:main',

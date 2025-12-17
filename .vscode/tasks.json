@@ -283,31 +283,12 @@
             "description": "Package name to build",
             "type": "pickString",
             "options": [
-                "auto_drive",
-                "laserscan_to_point_publisher",
-                "yahboom_app_save_map",
                 "realsense-ros",
                 "slam_nav",
-                "robot_ros2_bridge",
-                "yahboomcar_astra",
                 "yahboomcar_base_node",
                 "yahboomcar_bringup",
                 "yahboomcar_ctrl",
                 "yahboomcar_description",
-                "yahboomcar_description_x1",
-                "yahboomcar_KCFTracker",
-                "yahboomcar_laser",
-                "yahboomcar_linefollow",
-                "yahboomcar_mediapipe",
-                "yahboomcar_msgs",
-                "yahboomcar_multi",
-                "yahboomcar_nav",
-                "yahboomcar_point",
-                "yahboomcar_rviz",
-                "yahboomcar_slam",
-                "yahboomcar_visual",
-                "yahboomcar_voice_ctrl",
-                "yahboom_web_savmap_interfaces"
             ]
         }
     ]

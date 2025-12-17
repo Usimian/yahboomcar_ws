@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  yahboomcar_ros2:
+    image: yahboomcar_ros2:jazzy
+    container_name: yahboomcar_ros2
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_UID: 1000
+        USER_GID: 1000
+
+    # NVIDIA GPU support
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DISPLAY=${DISPLAY}
+
+      # ROS2 configuration
+      - ROS_DOMAIN_ID=0
+      - ROS_LOCALHOST_ONLY=0
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - ROBOT_TYPE=X3
+      - RPLIDAR_TYPE=s2
+      - JETSON_MODEL_NAME=JETSON_ORIN_NANO
+
+      # CUDA paths
+      - CUDA_HOME=/usr/local/cuda
+      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/aarch64-linux-gnu/tegra:$LD_LIBRARY_PATH
+
+    # Device access
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0        # Motor controller
+      - /dev/rplidar:/dev/rplidar        # Lidar (must create udev rule on host)
+      - /dev/video0:/dev/video0          # RealSense camera
+      - /dev/video1:/dev/video1
+      - /dev/video2:/dev/video2
+      - /dev/video3:/dev/video3
+      - /dev/video4:/dev/video4
+      - /dev/video5:/dev/video5
+      - /dev/bus/usb:/dev/bus/usb        # USB device access
+
+    # Volume mounts
+    volumes:
+      # Persistent map storage
+      - ./maps:/ros_ws/maps
+
+      # Optional calibration overrides (uncomment to use)
+      # - ./config_overrides/robot_calibration.yaml:/ros_ws/install/yahboomcar_bringup/share/yahboomcar_bringup/config/robot_calibration.yaml:ro
+      # - ./config_overrides/odometry_scaling.yaml:/ros_ws/install/yahboomcar_base_node/share/yahboomcar_base_node/config/odometry_scaling.yaml:ro
+
+      # X11 for GUI applications (optional)
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ~/.Xauthority:/home/rosuser/.Xauthority:ro
+
+    # Network mode - host required for ROS2 DDS discovery
+    network_mode: host
+
+    # Privileged mode for hardware access
+    privileged: true
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits (optional, adjust as needed)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
