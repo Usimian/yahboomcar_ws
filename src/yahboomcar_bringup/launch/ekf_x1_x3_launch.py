@@ -40,7 +40,7 @@ def generate_launch_description():
             # Odometry configuration - wheel encoders for position and velocities
             'odom0': 'odom_raw',
             'odom0_config': [True,  True,  False,  # Use x, y position from odometry
-                           False, False, False,  # Don't use yaw pose from odometry (use IMU)
+                           False, False, True,   # Use yaw orientation from odometry (IMU unreliable)
                            True,  True,  False,  # Use linear velocities from odometry
                            False, False, True,   # Use yaw angular velocity from odometry
                            False, False, False],
@@ -51,11 +51,11 @@ def generate_launch_description():
             'odom0_pose_rejection_threshold': 5.0,
             'odom0_twist_rejection_threshold': 1.0,
             
-            # IMU configuration - FIXED to work properly with odometry sensor fusion
-            # Use IMU for orientation stability, odometry for angular velocity
+            # IMU configuration - DISABLED because IMU orientation is unreliable (always reports 0)
+            # Use odometry for all orientation/rotation data
             'imu0': 'imu/data_raw',
             'imu0_config': [False, False, False,
-                           False, False, True,   # Use yaw orientation from IMU for stability
+                           False, False, False,  # Don't use IMU orientation (unreliable - always 0)
                            False, False, False,
                            False, False, False,  # Don't use IMU angular velocity (use odometry instead)
                            False, False, False], # Don't use accelerations to prevent drift

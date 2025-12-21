@@ -82,14 +82,14 @@ def generate_launch_description():
     )
 
     # === SLAM TOOLBOX ===
-    # SLAM Toolbox node for mapping
+    # SLAM Toolbox node for mapping - using async for proper odometry subscription
     slam_toolbox_node = Node(
         parameters=[
             slam_params_file,
             {'use_sim_time': use_sim_time}
         ],
         package='slam_toolbox',
-        executable='sync_slam_toolbox_node',
+        executable='async_slam_toolbox_node',
         name='slam_toolbox',
         namespace=namespace,
         output='screen',

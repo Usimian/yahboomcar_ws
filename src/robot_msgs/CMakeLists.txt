@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.16)  # Jazzy requirement
+cmake_minimum_required(VERSION 3.16)  # Humble requirement
 project(robot_msgs)
 
-# Default to C++17 (Jazzy standard)
+# Default to C++17 (Humble standard)
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()

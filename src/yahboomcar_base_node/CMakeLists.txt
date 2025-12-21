@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)  # Jazzy requirement
+cmake_minimum_required(VERSION 3.16)  # Humble requirement
 project(yahboomcar_base_node)
 
 # Default to C99
@@ -6,7 +6,7 @@ if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
 
-# Default to C++17 (Jazzy standard)
+# Default to C++17 (Humble standard)
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()

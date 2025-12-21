@@ -178,7 +178,7 @@ def generate_launch_description():
             'serial_port': '/dev/rplidar',
             'serial_baudrate': 1000000,
             'frame_id': 'laser_link',
-            'inverted': False,
+            'inverted': False,           # Lidar is mounted facing forward
             'angle_compensate': True,
             'scan_mode': 'Standard',     # Try Standard mode instead of DenseBoost
             'use_sim_time': False        # Explicitly set to false for system time usage
@@ -205,24 +205,39 @@ def generate_launch_description():
 
     # === CAMERA (OPTIONAL) ===
 
-    # RealSense camera configuration file
-    realsense_config = os.path.join(
+    # RealSense D435i camera node - uses config file for all parameters
+    # Configuration file: slam_nav/config/realsense_params.yaml
+    realsense_config_file = os.path.join(
         get_package_share_directory('slam_nav'),
         'config',
         'realsense_params.yaml'
     )
 
-    # RealSense D435i camera node
     camera_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             os.path.join(get_package_share_directory('realsense2_camera'), 'launch'),
             '/rs_launch.py'
         ]),
         launch_arguments={
-            'config_file': realsense_config,
-            'camera_name': 'camera',           # Camera name
-            'camera_namespace': '',            # Empty namespace to avoid /camera/camera/ double prefix
+            'config_file': realsense_config_file,
+            'camera_name': 'realsense_camera',
+            'camera_namespace': '',
+            'depth_module.profile': '424x240x6',
+            'rgb_camera.profile': '640x480x15',
+            'enable_depth': 'true',
+            'enable_color': 'true',
+            'pointcloud.enable': 'false',
         }.items(),
+        condition=IfCondition(LaunchConfiguration('enable_camera'))
+    )
+
+    # Static transform to connect URDF camera_link to RealSense realsense_camera_link
+    # This bridges the gap between robot_state_publisher (camera_link) and RealSense (realsense_camera_link)
+    camera_tf_node = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='camera_base_tf',
+        arguments=['0', '0', '0', '0', '0', '0', 'camera_link', 'realsense_camera_link'],
         condition=IfCondition(LaunchConfiguration('enable_camera'))
     )
 
@@ -252,6 +267,7 @@ def generate_launch_description():
 
         # Camera (optional)
         camera_node,
+        camera_tf_node,
 
         # Control
         yahboom_joy_node,

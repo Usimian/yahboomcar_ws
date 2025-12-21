@@ -23,7 +23,7 @@ setup(
     maintainer_email='nx-ros2@todo.todo',
     description='Yahboomcar robot bringup and hardware drivers',
     license='TODO: License declaration',
-    python_requires='>=3.12',  # Jazzy requirement
+    python_requires='>=3.1',  # Humble requirement
     entry_points={
         'console_scripts': [
             'Mcnamu_driver_X3 = yahboomcar_bringup.Mcnamu_driver_X3:main',

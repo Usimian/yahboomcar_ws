@@ -1,6 +1,4 @@
 from setuptools import setup
-import os
-from glob import glob
 
 package_name = 'yahboomcar_ctrl'
 
@@ -12,22 +10,17 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.py'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='nx-ros2',
-    maintainer_email='nx-ros2@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
-    python_requires='>=3.12',  # Jazzy requirement
-    extras_require={
-        "test": ["pytest"],
-    },
+    maintainer='yahboom',
+    maintainer_email='info@yahboom.com',
+    description='Yahboom car control package',
+    license='Apache-2.0',
     entry_points={
         'console_scripts': [
             'yahboom_joy_X3 = yahboomcar_ctrl.yahboom_joy_X3:main',
             'yahboom_keyboard = yahboomcar_ctrl.yahboom_keyboard:main',
         ],
     },
-) 
+)

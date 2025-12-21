@@ -159,14 +159,13 @@ class yahboomcar_driver(Node):
 
 	def get_hardware_velocities(self):
 		"""Get actual velocities from hardware speed feedback"""
-		# Get wheel-based linear velocities (reliable)
+		# Get wheel-based linear velocities
 		vx, vy, vz_wheel = self.car.get_motion_data()
-		
-		# Get wheel-based linear velocities and IMU angular velocity
-		# Use IMU angular velocity instead of unreliable wheel-based calculation
+
+		# Get IMU angular velocity (wheel-based vz is not working)
 		gx, gy, gz = self.car.get_gyroscope_data()
-		vz_imu = gz - self.imu_angular_bias  # IMU Z-axis angular velocity (yaw rate) with bias correction
-		
+		vz_imu = gz - self.imu_angular_bias
+
 		return vx, vy, vz_imu
 
 	def cmd_vel_callback(self,msg):

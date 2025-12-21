@@ -1,78 +1,90 @@
-/**:
-  ros__parameters:
-    # === CAMERA STREAM CONFIGURATION ===
-    enable_color: true
-    enable_depth: true
-    enable_infra1: false
-    enable_infra2: false
-    enable_fisheye: false
-    
-    # Camera profiles - adjust resolution and FPS to balance quality vs bandwidth
-    depth_module.depth_profile: "640,480,15"    # width,height,fps
-    rgb_camera.color_profile: "640,480,15"      # width,height,fps
-    
-    # === IMU CONFIGURATION - DISABLED ===
-    # RealSense IMU disabled - use robot's built-in IMU from yahboomcar_base_node instead
-    # This eliminates USB control transfer warnings and uses more reliable robot IMU
-    enable_gyro: false                          # Disabled - use robot IMU (/imu/data_raw topic)
-    enable_accel: false                         # Disabled - use robot IMU (/imu/data_raw topic)
-    unite_imu_method: 0                         # Not used when IMU disabled
-    
-    # IMU Frequencies - use defaults to prevent parameter validation errors
-    gyro_fps: 200                               # Default value (prevents ERROR: Given value, 100 is invalid)
-    accel_fps: 63                               # Default value (prevents ERROR: Given value, 50 is invalid)
-    
-    # === ADVANCED FEATURES (depth alignment enabled for point cloud) ===
-    enable_pose: false
-    enable_sync: false
-    align_depth.enable: true
-    enable_rgbd: false
-    pointcloud.enable: true
-    
-    # === FRAME IDS ===
-    base_frame_id: "camera_link"
-    depth_frame_id: "camera_depth_frame"
-    color_frame_id: "camera_color_frame"
-    depth_optical_frame_id: "camera_depth_optical_frame"
-    color_optical_frame_id: "camera_color_optical_frame"
-    
-    # === TF PUBLISHING ===
-    publish_tf: true
-    tf_publish_rate: 10.0
-    gyro_frame_id: "camera_gyro_frame"
-    accel_frame_id: "camera_accel_frame"
-    
-    # === CONNECTION SETTINGS ===
-    wait_for_device_timeout: -1.0          # Disable timeout (wait indefinitely)
-    reconnect_timeout: -1.0               # Disable reconnection timeout
-    initial_reset: false                  # Disable initial reset
-    device_type: ""
-    retry_on_usb_reset: false            # Disable USB reset retry
-    use_intra_process: false             # Disable intra-process communication
-    
-    # === USB OPTIMIZATION SETTINGS ===
-    usb_port_id: ""                       # Auto-detect USB port
-    enable_depth_scale: true              # Enable depth scaling
-    clip_distance: 10.0                   # Clip depth at 10 meters to reduce data
-    temporal_filter.enable: true          # Enable temporal filtering for stability
-    spatial_filter.enable: true          # Enable spatial filtering for noise reduction
-    
-    # === EXPOSURE SETTINGS (auto-exposure enabled for better lighting) ===
-    depth_module.enable_auto_exposure: true
-    rgb_camera.enable_auto_exposure: true
-    depth_module.exposure: 8500
-    rgb_camera.exposure: 156
-    
-    # === ERROR HANDLING ===
-    allow_no_texture_points: true
-    ordered_pc: false
-    
-    # === IMU CALIBRATION (optional - uncomment if you have calibration data) ===
-    # linear_accel_cov: 0.01
-    # angular_velocity_cov: 0.01
-    
-    # === LOGGING CONFIGURATION ===
-    log_level: "error"                          # Reduce log verbosity
-    
-    # === JSON CONFIGURATION FILE ===
-    json_file_path: ""                          # Leave empty for default settings
+# === CAMERA STREAM CONFIGURATION ===
+enable_color: true
+enable_depth: true
+enable_infra1: false
+enable_infra2: false
+enable_fisheye: false
+
+# Camera profiles - adjust resolution and FPS to balance quality vs bandwidth
+depth_module.depth_profile: "424x240x6"     # width,height,fps - Reduced resolution for performance
+rgb_camera.color_profile: "640x480x15"      # width,height,fps
+
+# === QoS SETTINGS ===
+# Use SENSOR_DATA QoS profile for PC client compatibility
+# RealSense wrapper accepts: SYSTEM_DEFAULT, SENSOR_DATA, SERVICES_DEFAULT, PARAMETERS, DEFAULT
+# SENSOR_DATA = BEST_EFFORT reliability (incompatible!)
+# We need to use launch arguments instead to override QoS
+# depth_qos: "SENSOR_DATA"
+# color_qos: "SENSOR_DATA"
+
+# === IMU CONFIGURATION - DISABLED ===
+# RealSense IMU disabled - use robot's built-in IMU from yahboomcar_base_node instead
+# This eliminates USB control transfer warnings and uses more reliable robot IMU
+enable_gyro: false                          # Disabled - use robot IMU (/imu/data_raw topic)
+enable_accel: false                         # Disabled - use robot IMU (/imu/data_raw topic)
+unite_imu_method: 0                         # Not used when IMU disabled
+
+# IMU Frequencies - use defaults to prevent parameter validation errors
+gyro_fps: 200                               # Default value (prevents ERROR: Given value, 100 is invalid)
+accel_fps: 63                               # Default value (prevents ERROR: Given value, 50 is invalid)
+
+# === ADVANCED FEATURES ===
+# Point cloud disabled - PC will generate from depth image for better efficiency
+enable_pose: false
+enable_sync: false
+align_depth.enable: true
+enable_rgbd: false
+pointcloud__neon_.enable: false
+
+# === FRAME IDS ===
+# RealSense will create realsense_camera_link as base frame
+# We'll publish static transform to connect it to robot URDF camera_link
+base_frame_id: "realsense_camera_link"
+depth_frame_id: "realsense_camera_depth_frame"
+color_frame_id: "realsense_camera_color_frame"
+depth_optical_frame_id: "realsense_camera_depth_optical_frame"
+color_optical_frame_id: "realsense_camera_color_optical_frame"
+
+# === TF PUBLISHING ===
+publish_tf: true
+tf_publish_rate: 10.0
+gyro_frame_id: "realsense_camera_gyro_frame"
+accel_frame_id: "realsense_camera_accel_frame"
+
+# === CONNECTION SETTINGS ===
+wait_for_device_timeout: -1.0          # Disable timeout (wait indefinitely)
+reconnect_timeout: -1.0               # Disable reconnection timeout
+initial_reset: false                  # Disable initial reset
+device_type: ""
+retry_on_usb_reset: false            # Disable USB reset retry
+use_intra_process: false             # Disable intra-process communication
+
+# === USB OPTIMIZATION SETTINGS ===
+usb_port_id: ""                       # Auto-detect USB port
+enable_depth_scale: true              # Enable depth scaling
+clip_distance: 5.0                    # Clip depth at 5 meters (navigation range)
+temporal_filter.enable: true          # Enable temporal filtering for stability
+spatial_filter.enable: true           # Enable spatial filtering for noise reduction
+
+# === DECIMATION FILTER (reduces point cloud size) ===
+decimation_filter.enable: true        # Enable decimation for fewer points
+decimation_filter.filter_magnitude: 2 # 2=half resolution, 4=quarter resolution
+
+# === EXPOSURE SETTINGS (auto-exposure enabled for better lighting) ===
+depth_module.enable_auto_exposure: true
+rgb_camera.enable_auto_exposure: true
+depth_module.exposure: 8500
+rgb_camera.exposure: 156
+
+# === ERROR HANDLING ===
+pointcloud.allow_no_texture_points: true
+
+# === IMU CALIBRATION (optional - uncomment if you have calibration data) ===
+# linear_accel_cov: 0.01
+# angular_velocity_cov: 0.01
+
+# === LOGGING CONFIGURATION ===
+log_level: "error"                          # Reduce log verbosity
+
+# === JSON CONFIGURATION FILE ===
+json_file_path: ""                          # Leave empty for default settings

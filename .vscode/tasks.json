@@ -283,7 +283,6 @@
             "description": "Package name to build",
             "type": "pickString",
             "options": [
-                "realsense-ros",
                 "slam_nav",
                 "yahboomcar_base_node",
                 "yahboomcar_bringup",

@@ -3,27 +3,11 @@
     "python.formatting.provider": "black",
     "ros.distro": "humble",
     "python.autoComplete.extraPaths": [
-        "/home/mw/yahboomcar_ros2/library_ws/install/teb_msgs/local/lib/python3.10/dist-packages",
-        "/home/mw/yahboomcar_ros2/library_ws/install/robot_localization/local/lib/python3.10/dist-packages",
-        "/home/mw/yahboomcar_ros2/library_ws/install/costmap_converter_msgs/local/lib/python3.10/dist-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/yahboomcar_description/lib/python3.10/site-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/yahboomcar_ctrl/lib/python3.10/site-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/yahboomcar_bringup/lib/python3.10/site-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/robot_msgs/local/lib/python3.10/dist-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/realsense2_camera_msgs/local/lib/python3.10/dist-packages",
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
     ],
     "python.analysis.extraPaths": [
-        "/home/mw/yahboomcar_ros2/library_ws/install/teb_msgs/local/lib/python3.10/dist-packages",
-        "/home/mw/yahboomcar_ros2/library_ws/install/robot_localization/local/lib/python3.10/dist-packages",
-        "/home/mw/yahboomcar_ros2/library_ws/install/costmap_converter_msgs/local/lib/python3.10/dist-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/yahboomcar_description/lib/python3.10/site-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/yahboomcar_ctrl/lib/python3.10/site-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/yahboomcar_bringup/lib/python3.10/site-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/robot_msgs/local/lib/python3.10/dist-packages",
-        "/home/mw/yahboomcar_ros2/yahboomcar_ws/install/realsense2_camera_msgs/local/lib/python3.10/dist-packages",
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
-    ]
+    ],
 }

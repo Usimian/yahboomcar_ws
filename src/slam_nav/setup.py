@@ -34,6 +34,7 @@ setup(
             'camera_nav_monitor = slam_nav.camera_nav_monitor:main',
             'robot_interface_node = slam_nav.robot_interface_node:main',
             'calibration_test = slam_nav.calibration_test:main',
+            'pointcloud_height_filter = slam_nav.pointcloud_height_filter:main',
         ],
     },
 )

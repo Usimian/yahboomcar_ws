@@ -14,7 +14,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
-#include "turtlesim/turtlesim/msg/pose.hpp"
+//#include "turtlesim/turtlesim/msg/pose.hpp"
 
 
 #include <memory>
@@ -129,23 +129,39 @@ class OdomPublisher:public rclcpp ::Node
 	  	      odom.twist.covariance[0] = 0.0001;
 	  	      odom.twist.covariance[7] = 0.0001;
 	  	      odom.twist.covariance[35] = 0.0001;
-	  	      
+
 	  	      odom_publisher_->publish(odom);
+
+	  	      // Publish TF transform from odom to base_footprint if enabled
+	  	      if (pub_odom_tf_) {
+	  	          geometry_msgs::msg::TransformStamped odom_trans;
+	  	          odom_trans.header.stamp = current_time;
+	  	          odom_trans.header.frame_id = odom_frame;
+	  	          odom_trans.child_frame_id = base_footprint_frame;
+
+	  	          odom_trans.transform.translation.x = x_pos_;
+	  	          odom_trans.transform.translation.y = y_pos_;
+	  	          odom_trans.transform.translation.z = 0.0;
+	  	          odom_trans.transform.rotation = odom_quat;
+
+	  	          tf_broadcaster_->sendTransform(odom_trans);
+	  	      }
 	  	  }
 	  	  
 	  	  void handle_vel(const std::shared_ptr<geometry_msgs::msg::Twist > msg)
 	  	  {
 	  	  	rclcpp::Time current_time = this->get_clock()->now();
-	  	  	
+
 	  	  	// Store the actual hardware velocities (from vel_raw)
+	  	  	// Negate angular velocity to match ROS coordinate convention
 	  	  	linear_velocity_x_ = msg->linear.x;
     		linear_velocity_y_ = msg->linear.y;
-    		angular_velocity_z_ = msg->angular.z;
-    		
+    		angular_velocity_z_ = -msg->angular.z;
+
     		// Calculate time delta for position integration
 			vel_dt_ = (current_time - last_vel_time_).seconds();
     		last_vel_time_ = current_time;
-    		
+
     		// Only integrate if we have a reasonable time delta and non-zero velocities
     		if (vel_dt_ > 0.0 && vel_dt_ < 1.0) // Sanity check: between 0 and 1 second
     		{
@@ -154,7 +170,7 @@ class OdomPublisher:public rclcpp ::Node
     			double delta_y = (linear_velocity_x_ * sin(heading_) + linear_velocity_y_ * cos(heading_)) * vel_dt_ * linear_scale_y_;
 				x_pos_ += delta_x;
     			y_pos_ += delta_y;
-				
+
 				// Update heading from actual angular velocity
     			double delta_heading = angular_velocity_z_ * vel_dt_ * angular_scale_;
 				heading_ += delta_heading;
