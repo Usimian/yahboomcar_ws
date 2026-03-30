@@ -1,19 +1,10 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import LaunchConfiguration
-from launch.actions import DeclareLaunchArgument
 import os
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    
-    # Declare launch argument for robot type
-    robot_type_arg = DeclareLaunchArgument(
-        'robot_type',
-        default_value='X3',
-        description='Robot type: X1 or X3'
-    )
-    
+
     # EKF node configuration
     ekf_node = Node(
         package='robot_localization',
@@ -34,7 +25,7 @@ def generate_launch_description():
             'debug_out_file': '/path/to/debug/file.txt',
             'permit_corrected_publication': False,
             'publish_acceleration': False,
-            'publish_tf': False,  # Disable EKF TF publishing, use base_node instead
+            'publish_tf': True,  # Enable EKF TF publishing for Nav2
             'map_frame': 'map',
             
             # Odometry configuration - wheel encoders for position and velocities
@@ -50,23 +41,6 @@ def generate_launch_description():
             'odom0_relative': False,
             'odom0_pose_rejection_threshold': 5.0,
             'odom0_twist_rejection_threshold': 1.0,
-            
-            # IMU configuration - DISABLED because IMU orientation is unreliable (always reports 0)
-            # Use odometry for all orientation/rotation data
-            'imu0': 'imu/data_raw',
-            'imu0_config': [False, False, False,
-                           False, False, False,  # Don't use IMU orientation (unreliable - always 0)
-                           False, False, False,
-                           False, False, False,  # Don't use IMU angular velocity (use odometry instead)
-                           False, False, False], # Don't use accelerations to prevent drift
-            'imu0_nodelay': False,
-            'imu0_differential': False,
-            'imu0_relative': False,  # Use absolute measurements for IMU
-            'imu0_queue_size': 20,
-            'imu0_pose_rejection_threshold': 2.0,  # More permissive threshold
-            'imu0_twist_rejection_threshold': 1.0,
-            'imu0_linear_acceleration_rejection_threshold': 1.0,
-            'imu0_remove_gravitational_acceleration': True,
             
             # Process noise covariance matrix - tuned for X3 robot
             'process_noise_covariance': [0.05, 0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
@@ -108,6 +82,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        robot_type_arg,
         ekf_node,
     ]) 

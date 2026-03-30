@@ -3,33 +3,16 @@
 """
 Robot Bringup Launch File for Yahboom X3
 Brings up the core robot hardware system with calibration parameters.
-This launch file uses robot_calibration.yaml and focuses only on robot hardware.
-
-Includes:
-- Robot hardware driver (Mcnamu_driver_X3) with calibration parameters
-- Base node for odometry and transforms with calibration parameters  
-- IMU filtering
-- EKF sensor fusion
-- Robot state publisher
-- Joint state publisher
-- Joystick control
-
-Does NOT include:
-- SLAM components (handled by higher-level launch files)
-
-Optionally includes:
-- Intel RealSense D435i camera (controlled by enable_camera argument)
 """
 
 import os
 from ament_index_python.packages import get_package_share_directory, get_package_share_path
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import Command, LaunchConfiguration
+from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
+from launch.substitutions import Command
 
 
 def generate_launch_description():
@@ -37,61 +20,33 @@ def generate_launch_description():
     if not os.environ.get("PRINTED_ROBOT_BRINGUP"):
         os.environ["PRINTED_ROBOT_BRINGUP"] = "1"
         print("---------------------Yahboom X3 Robot Bringup with Calibration---------------------")
-    
+
     # Get package paths
     urdf_tutorial_path = get_package_share_path('yahboomcar_description')
     default_model_path = urdf_tutorial_path / 'urdf/yahboomcar_X3_simple.urdf'
-    
-    # Launch arguments
-    gui_arg = DeclareLaunchArgument(
-        name='gui', 
-        default_value='false', 
-        choices=['true', 'false'],
-        description='Flag to enable joint_state_publisher_gui'
-    )
-    
-    model_arg = DeclareLaunchArgument(
-        name='model', 
-        default_value=str(default_model_path),
-        description='Absolute path to robot urdf file'
-    )
-    
-    pub_odom_tf_arg = DeclareLaunchArgument(
-        'pub_odom_tf',
-        default_value='false',
-        description='Whether to publish the tf from the original odom to the base_footprint'
-    )
 
-    enable_camera_arg = DeclareLaunchArgument(
-        'enable_camera',
-        default_value='true',
-        description='Enable Intel RealSense D435i camera'
-    )
-    
     # Robot description
     robot_description = ParameterValue(
-        Command(['xacro ', LaunchConfiguration('model')]),
+        Command(['xacro ', str(default_model_path)]),
         value_type=str
     )
-    
+
     # === ROBOT CALIBRATION PARAMETERS ===
-    
-    # Robot calibration parameter file - THIS IS THE KEY ADDITION
-    calibration_config = os.path.join(              
+
+    calibration_config = os.path.join(
         get_package_share_directory('yahboomcar_bringup'),
         'config',
         'robot_calibration.yaml'
     )
-    
+
     odometry_config = os.path.join(
         get_package_share_directory('yahboomcar_base_node'),
         'config',
         'odometry_scaling.yaml'
     )
-    
+
     # === ROBOT NODES ===
-    
-    # Robot state publisher
+
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -99,75 +54,45 @@ def generate_launch_description():
         output='screen',
         parameters=[{'robot_description': robot_description}]
     )
-    
-    # Joint state publisher
+
     joint_state_publisher_node = Node(
         package='joint_state_publisher',
         executable='joint_state_publisher',
         name='joint_state_publisher',
-        condition=UnlessCondition(LaunchConfiguration('gui'))
     )
-    
-    # Joint state publisher GUI (optional)
-    joint_state_publisher_gui_node = Node(
-        package='joint_state_publisher_gui',
-        executable='joint_state_publisher_gui',
-        name='joint_state_publisher_gui',
-        condition=IfCondition(LaunchConfiguration('gui'))
-    )
-    
+
     # === HARDWARE DRIVERS WITH CALIBRATION ===
-    
-    # Main robot driver - USES CALIBRATION PARAMETERS
+
     driver_node = Node(
         package='yahboomcar_bringup',
         executable='Mcnamu_driver_X3',
         name='yahboomcar_driver',
         output='screen',
-        parameters=[calibration_config]  # Load calibration parameters from YAML
+        parameters=[calibration_config]
     )
-    
-    # Base node for odometry and transforms - USES CALIBRATION PARAMETERS
+
     base_node = Node(
         package='yahboomcar_base_node',
         executable='base_node_X3',
         name='base_node',
         output='screen',
         parameters=[
-            odometry_config,     # Load odometry scaling parameters
-            {'pub_odom_tf': LaunchConfiguration('pub_odom_tf')}  # TF publishing control
+            odometry_config,
+            {'pub_odom_tf': True}
         ]
     )
-    
+
     # === IMU AND SENSOR FUSION ===
-    
-    # IMU filter configuration
-    imu_filter_config = os.path.join(
-        get_package_share_directory('yahboomcar_bringup'),
-        'param',
-        'imu_filter_param.yaml'
-    )
-    
-    # IMU filter node - DISABLED due to gyroscope bias issues
-    # imu_filter_node = Node(
-    #     package='imu_filter_madgwick',
-    #     executable='imu_filter_madgwick_node',
-    #     name='imu_filter',
-    #     output='screen',
-    #     parameters=[imu_filter_config]
-    # )
-    
-    # EKF for sensor fusion
+
     ekf_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             os.path.join(get_package_share_directory('yahboomcar_bringup'), 'launch'),
             '/ekf_x1_x3_launch.py'
         ])
     )
-    
+
     # === LIDAR ===
-    
-    # S2 lidar node - Simple configuration to get full 360° data
+
     lidar_node = Node(
         package='sllidar_ros2',
         executable='sllidar_node',
@@ -178,24 +103,22 @@ def generate_launch_description():
             'serial_port': '/dev/rplidar',
             'serial_baudrate': 1000000,
             'frame_id': 'laser_link',
-            'inverted': False,           # Lidar is mounted facing forward
+            'inverted': False,
             'angle_compensate': True,
-            'scan_mode': 'Standard',     # Try Standard mode instead of DenseBoost
-            'use_sim_time': False        # Explicitly set to false for system time usage
+            'scan_mode': 'Standard',
+            'use_sim_time': False
         }]
     )
-    
+
     # === CONTROL ===
-    
-    # Joystick control node
+
     yahboom_joy_node = Node(
         package='yahboomcar_ctrl',
         executable='yahboom_joy_X3',
         name='yahboom_joy',
         output='screen'
     )
-    
-    # Joy node for joystick input
+
     joy_node = Node(
         package='joy',
         executable='joy_node',
@@ -203,10 +126,8 @@ def generate_launch_description():
         output='screen'
     )
 
-    # === CAMERA (OPTIONAL) ===
+    # === CAMERA ===
 
-    # RealSense D435i camera node - uses config file for all parameters
-    # Configuration file: slam_nav/config/realsense_params.yaml
     realsense_config_file = os.path.join(
         get_package_share_directory('slam_nav'),
         'config',
@@ -222,54 +143,32 @@ def generate_launch_description():
             'config_file': realsense_config_file,
             'camera_name': 'realsense_camera',
             'camera_namespace': '',
-            'depth_module.profile': '424x240x6',
-            'rgb_camera.profile': '640x480x15',
+            'depth_module.depth_profile': '424x240x6',
+            'rgb_camera.color_profile': '640x480x15',
             'enable_depth': 'true',
             'enable_color': 'true',
-            'pointcloud.enable': 'false',
-        }.items(),
-        condition=IfCondition(LaunchConfiguration('enable_camera'))
+            'pointcloud.enable': 'true',
+            'publish_tf': 'true',
+            'tf_publish_rate': '0.0',
+        }.items()
     )
 
-    # Static transform to connect URDF camera_link to RealSense realsense_camera_link
-    # This bridges the gap between robot_state_publisher (camera_link) and RealSense (realsense_camera_link)
     camera_tf_node = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='camera_base_tf',
-        arguments=['0', '0', '0', '0', '0', '0', 'camera_link', 'realsense_camera_link'],
-        condition=IfCondition(LaunchConfiguration('enable_camera'))
+        arguments=['0', '0', '0', '0', '0', '0', 'camera_link', 'realsense_camera_realsense_camera_link'],
     )
 
-    # Return launch description
     return LaunchDescription([
-        # Launch arguments
-        gui_arg,
-        model_arg,
-        pub_odom_tf_arg,
-        enable_camera_arg,
-
-        # Robot description and visualization
         robot_state_publisher_node,
         joint_state_publisher_node,
-        joint_state_publisher_gui_node,
-
-        # Hardware drivers WITH CALIBRATION
         driver_node,
         base_node,
-
-        # IMU and sensor fusion
-        # imu_filter_node,  # Disabled due to gyroscope bias
         ekf_node,
-
-        # Lidar
         lidar_node,
-
-        # Camera (optional)
         camera_node,
         camera_tf_node,
-
-        # Control
         yahboom_joy_node,
         joy_node
     ])

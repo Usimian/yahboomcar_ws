@@ -3,7 +3,6 @@ enable_color: true
 enable_depth: true
 enable_infra1: false
 enable_infra2: false
-enable_fisheye: false
 
 # Camera profiles - adjust resolution and FPS to balance quality vs bandwidth
 depth_module.depth_profile: "424x240x6"     # width,height,fps - Reduced resolution for performance
@@ -30,38 +29,27 @@ accel_fps: 63                               # Default value (prevents ERROR: Giv
 
 # === ADVANCED FEATURES ===
 # Point cloud disabled - PC will generate from depth image for better efficiency
-enable_pose: false
 enable_sync: false
 align_depth.enable: true
 enable_rgbd: false
-pointcloud__neon_.enable: false
 
 # === FRAME IDS ===
 # RealSense will create realsense_camera_link as base frame
 # We'll publish static transform to connect it to robot URDF camera_link
 base_frame_id: "realsense_camera_link"
-depth_frame_id: "realsense_camera_depth_frame"
-color_frame_id: "realsense_camera_color_frame"
-depth_optical_frame_id: "realsense_camera_depth_optical_frame"
-color_optical_frame_id: "realsense_camera_color_optical_frame"
 
 # === TF PUBLISHING ===
 publish_tf: true
-tf_publish_rate: 10.0
-gyro_frame_id: "realsense_camera_gyro_frame"
-accel_frame_id: "realsense_camera_accel_frame"
+tf_publish_rate: 0.0
 
 # === CONNECTION SETTINGS ===
 wait_for_device_timeout: -1.0          # Disable timeout (wait indefinitely)
 reconnect_timeout: -1.0               # Disable reconnection timeout
 initial_reset: false                  # Disable initial reset
 device_type: ""
-retry_on_usb_reset: false            # Disable USB reset retry
-use_intra_process: false             # Disable intra-process communication
 
 # === USB OPTIMIZATION SETTINGS ===
 usb_port_id: ""                       # Auto-detect USB port
-enable_depth_scale: true              # Enable depth scaling
 clip_distance: 5.0                    # Clip depth at 5 meters (navigation range)
 temporal_filter.enable: true          # Enable temporal filtering for stability
 spatial_filter.enable: true           # Enable spatial filtering for noise reduction
@@ -74,7 +62,6 @@ decimation_filter.filter_magnitude: 2 # 2=half resolution, 4=quarter resolution
 depth_module.enable_auto_exposure: true
 rgb_camera.enable_auto_exposure: true
 depth_module.exposure: 8500
-rgb_camera.exposure: 156
 
 # === ERROR HANDLING ===
 pointcloud.allow_no_texture_points: true
