@@ -56,10 +56,10 @@ class PointCloudHeightFilter(Node):
         self.tf_buffer = Buffer(cache_time=Duration(seconds=10.0))
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        # Give TF buffer time to fill
-        self.get_logger().info('Waiting 2 seconds for TF buffer to fill...')
+        # Give TF buffer time to fill - longer wait for map frame initialization
+        self.get_logger().info('Waiting 5 seconds for TF buffer to fill...')
         import time
-        time.sleep(2.0)
+        time.sleep(5.0)
 
         # Create subscriber and publisher
         self.subscription = self.create_subscription(
@@ -108,6 +108,11 @@ class PointCloudHeightFilter(Node):
                     self.get_logger().warn(f'TF lookup failed: {e}')
                 self.error_count += 1
                 return
+
+            # Reset error count on successful transform
+            if self.error_count > 0 and self.frame_count % 100 == 0:
+                self.get_logger().info(f'TF lookups successful, recovered from {self.error_count} errors')
+                self.error_count = 0
 
             # Extract points from message
             points_list = list(pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=self.filter_nans))

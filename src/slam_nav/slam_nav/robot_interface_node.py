@@ -77,7 +77,7 @@ class RobotInterfaceNode(Node):
         
         # Camera status monitoring
         self.camera_sub = self.create_subscription(
-            Image, '/realsense/camera/color/image_raw', self.camera_callback, 10)
+            Image, '/realsense_camera/color/image_raw', self.camera_callback, 10)
             
         # Lidar input
         self.scan_sub = self.create_subscription(

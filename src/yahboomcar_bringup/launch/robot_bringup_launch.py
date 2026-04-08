@@ -8,11 +8,11 @@ Brings up the core robot hardware system with calibration parameters.
 import os
 from ament_index_python.packages import get_package_share_directory, get_package_share_path
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.substitutions import Command
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 def generate_launch_description():
@@ -78,17 +78,8 @@ def generate_launch_description():
         output='screen',
         parameters=[
             odometry_config,
-            {'pub_odom_tf': True}
+            {'pub_odom_tf': False}
         ]
-    )
-
-    # === IMU AND SENSOR FUSION ===
-
-    ekf_node = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            os.path.join(get_package_share_directory('yahboomcar_bringup'), 'launch'),
-            '/ekf_x1_x3_launch.py'
-        ])
     )
 
     # === LIDAR ===
@@ -143,11 +134,6 @@ def generate_launch_description():
             'config_file': realsense_config_file,
             'camera_name': 'realsense_camera',
             'camera_namespace': '',
-            'depth_module.depth_profile': '424x240x6',
-            'rgb_camera.color_profile': '640x480x15',
-            'enable_depth': 'true',
-            'enable_color': 'true',
-            'pointcloud.enable': 'true',
             'publish_tf': 'true',
             'tf_publish_rate': '0.0',
         }.items()
@@ -165,7 +151,6 @@ def generate_launch_description():
         joint_state_publisher_node,
         driver_node,
         base_node,
-        ekf_node,
         lidar_node,
         camera_node,
         camera_tf_node,

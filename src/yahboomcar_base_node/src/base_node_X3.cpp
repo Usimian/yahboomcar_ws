@@ -80,9 +80,9 @@ class OdomPublisher:public rclcpp ::Node
 		// Publish initial odometry immediately
 		this->publish_odometry();
 		
-		// Publish odometry at 10Hz to ensure it's always available
+		// Publish odometry at 20Hz to ensure it's always available
 		keepalive_timer_ = this->create_wall_timer(
-			std::chrono::milliseconds(100), // 10Hz
+			std::chrono::milliseconds(50), // 20Hz
 			std::bind(&OdomPublisher::publish_odometry, this)
 		);
 
