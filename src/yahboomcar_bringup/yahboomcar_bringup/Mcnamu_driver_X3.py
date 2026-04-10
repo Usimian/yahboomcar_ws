@@ -157,16 +157,10 @@ class yahboomcar_driver(Node):
 		
 		self.get_logger().info("Yahboom X3 driver initialization complete")
 
-	def get_hardware_velocities(self):
+	def get_hardware_velocities(self, gz):
 		"""Get actual velocities from hardware speed feedback"""
-		# Get wheel-based linear velocities
 		vx, vy, vz_wheel = self.car.get_motion_data()
-
-		# Get IMU angular velocity (wheel-based vz is not working)
-		gx, gy, gz = self.car.get_gyroscope_data()
-		vz_imu = gz - self.imu_angular_bias
-
-		return vx, vy, vz_imu
+		return vx, vy, gz - self.imu_angular_bias
 
 	def cmd_vel_callback(self,msg):
         # Car motion control, subscriber callback function
@@ -226,44 +220,34 @@ class yahboomcar_driver(Node):
 				state.name = [self.Prefix+"back_right_joint",self.Prefix+ "back_left_joint",self.Prefix+"front_left_steer_joint",self.Prefix+"front_left_wheel_joint",
 								self.Prefix+"front_right_steer_joint", self.Prefix+"front_right_wheel_joint"]
 			
-			# Get sensor data with error handling
+			# Get sensor data with error handling — read gyroscope once, share with vel computation
 			try:
-				edition.data = self.car.get_version()*1.0
 				ax, ay, az = self.car.get_accelerometer_data()
 				gx, gy, gz = self.car.get_gyroscope_data()
 				mx, my, mz = self.car.get_magnetometer_data()
-				mx = mx * 1.0
-				my = my * 1.0
-				mz = mz * 1.0
-				vx, vy, angular = self.car.get_motion_data()
-				
+				hardware_vx, hardware_vy, hardware_vz = self.get_hardware_velocities(gz)
 			except Exception as e:
 				self.get_logger().error(f"Error reading sensor data: {str(e)}")
-				# Set default values on error
-				edition.data = -1.0
 				ax = ay = az = 0.0
 				gx = gy = gz = 0.0
 				mx = my = mz = 0.0
-				vx = vy = angular = 0.0
-			
-			# Publish raw gyroscope data (bias correction not needed since using wheel odometry for angular velocity)
+				hardware_vx = hardware_vy = hardware_vz = 0.0
+
 			imu.header.stamp = time_stamp.to_msg()
 			imu.header.frame_id = self.imu_link
-			imu.linear_acceleration.x = ax*1.0
-			imu.linear_acceleration.y = ay*1.0
-			imu.linear_acceleration.z = az*1.0
-			imu.angular_velocity.x = gx*1.0
-			imu.angular_velocity.y = gy*1.0
-			imu.angular_velocity.z = gz*1.0
+			imu.linear_acceleration.x = ax
+			imu.linear_acceleration.y = ay
+			imu.linear_acceleration.z = az
+			imu.angular_velocity.x = gx
+			imu.angular_velocity.y = gy
+			imu.angular_velocity.z = gz
 
 			mag.header.stamp = time_stamp.to_msg()
 			mag.header.frame_id = self.imu_link
-			mag.magnetic_field.x = mx*1.0
-			mag.magnetic_field.y = my*1.0
-			mag.magnetic_field.z = mz*1.0
-			
-			# This provides actual measured velocities from the robot's firmware
-			hardware_vx, hardware_vy, hardware_vz = self.get_hardware_velocities()
+			mag.magnetic_field.x = float(mx)
+			mag.magnetic_field.y = float(my)
+			mag.magnetic_field.z = float(mz)
+
 			twist.linear.x = hardware_vx
 			twist.linear.y = hardware_vy
 			twist.angular.z = hardware_vz
@@ -271,7 +255,6 @@ class yahboomcar_driver(Node):
 			self.velPublisher.publish(twist)
 			self.imuPublisher.publish(imu)
 			self.magPublisher.publish(mag)
-			self.EdiPublisher.publish(edition)
 			
 		except Exception as e:
 			self.get_logger().error(f"Error in pub_data: {str(e)}")

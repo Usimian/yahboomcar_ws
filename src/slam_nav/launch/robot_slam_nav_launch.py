@@ -55,9 +55,9 @@ def generate_launch_description():
         parameters=[{
             "input_topic": "/realsense_camera/depth/color/points",
             "output_topic": "/camera/depth/points_filtered",
-            "target_frame": "base_link",
-            "min_height": 0.01,
-            "max_height": 0.26,
+            "target_frame": "base_footprint",
+            "min_height": 0.02,
+            "max_height": 0.25,
             "filter_nans": True,
             "voxel_leaf_size": 0.03
         }],

@@ -7,7 +7,7 @@ Provides a clean interface for external clients to control the robot
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import Image, LaserScan
+from sensor_msgs.msg import CameraInfo
 from nav_msgs.msg import Odometry
 from robot_msgs.msg import SensorData
 from robot_msgs.srv import ExecuteCommand, GetBatteryVoltage
@@ -75,13 +75,9 @@ class RobotInterfaceNode(Node):
     def setup_subscribers(self):
         """Setup ROS2 subscribers for sensor input"""
         
-        # Camera status monitoring
+        # Camera status monitoring via lightweight CameraInfo (not full image)
         self.camera_sub = self.create_subscription(
-            Image, '/realsense_camera/color/image_raw', self.camera_callback, 10)
-            
-        # Lidar input
-        self.scan_sub = self.create_subscription(
-            LaserScan, '/scan', self.scan_callback, 10)
+            CameraInfo, '/realsense_camera/color/camera_info', self.camera_callback, 10)
 
         # Odometry input for precision movement
         self.odom_sub = self.create_subscription(
@@ -429,21 +425,8 @@ class RobotInterfaceNode(Node):
         self.sensor_pub.publish(self.sensor_data)
     
     def camera_callback(self, msg):
-        """Handle camera input for status monitoring"""
+        """Handle camera info for status monitoring"""
         self.sensor_data.camera_status = "active"
-    
-    def scan_callback(self, msg):
-        """Handle lidar scan input"""
-        if len(msg.ranges) > 0:
-            # COORDINATE FRAME CORRECTION for sensor message only:
-            # Lidar 0° points backward from robot perspective, so we need to map:
-            # - Robot front = Lidar 180° (index 0, since lidar goes from -180° to +180°)
-            # - Robot left = Lidar 90° (index 3/4 of array) 
-            # - Robot right = Lidar -90° (index 1/4 of array)
-            
-            front_idx = 0  # Lidar -180°/180° = Robot front
-            left_idx = len(msg.ranges) * 3 // 4   # Lidar 90° = Robot left
-            right_idx = len(msg.ranges) // 4      # Lidar -90° = Robot right
 
 
     def odom_callback(self, msg):
