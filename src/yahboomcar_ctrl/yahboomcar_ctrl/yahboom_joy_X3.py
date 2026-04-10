@@ -24,8 +24,8 @@ class JoyTeleop(Node):
 		self.cancel_time = time.time()
 		self.user_name = getpass.getuser()
 		print(self.user_name)
-		self.linear_speed = 0.25
-		self.angular_speed = 0.25
+		self.linear_speed = 1.0
+		self.angular_speed = 1.0
 		
 		# Button state tracking for edge detection
 		self.prev_rgb_button_state = False
@@ -53,7 +53,7 @@ class JoyTeleop(Node):
 		#declare parameter and get the value
 		self.declare_parameter('xspeed_limit',1.0)
 		self.declare_parameter('yspeed_limit',1.0)
-		self.declare_parameter('angular_speed_limit',5.0)
+		self.declare_parameter('angular_speed_limit',1.57)
 		self.xspeed_limit = self.get_parameter('xspeed_limit').get_parameter_value().double_value
 		self.yspeed_limit = self.get_parameter('yspeed_limit').get_parameter_value().double_value
 		self.angular_speed_limit = self.get_parameter('angular_speed_limit').get_parameter_value().double_value

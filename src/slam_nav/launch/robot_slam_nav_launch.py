@@ -82,6 +82,13 @@ def generate_launch_description():
         actions=[GroupAction([robot_interface_node])]
     )
 
+
+    display_status_node = Node(
+        package="slam_nav",
+        executable="display_status_node",
+        name="display_status_node",
+        output="screen",
+    )
     return LaunchDescription([
         stdout_linebuf_envvar,
         declare_log_level_cmd,
@@ -89,4 +96,5 @@ def generate_launch_description():
         ekf_cmd,
         delayed_pointcloud_group,
         delayed_interface_group,
+        display_status_node,
     ])
