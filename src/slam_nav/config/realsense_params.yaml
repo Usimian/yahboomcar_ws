@@ -17,3 +17,4 @@ wait_for_device_timeout: -1.0
 reconnect_timeout: -1.0
 depth_module.enable_auto_exposure: true
 rgb_camera.enable_auto_exposure: true
+rgb_camera.power_line_frequency: 2

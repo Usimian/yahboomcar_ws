@@ -51,9 +51,9 @@ class JoyTeleop(Node):
 		self.robot_command_client = self.create_client(ExecuteCommand, '/robot/execute_command')
 		
 		#declare parameter and get the value
-		self.declare_parameter('xspeed_limit',1.0)
-		self.declare_parameter('yspeed_limit',1.0)
-		self.declare_parameter('angular_speed_limit',1.57)
+		self.declare_parameter('xspeed_limit',0.5)
+		self.declare_parameter('yspeed_limit',0.5)
+		self.declare_parameter('angular_speed_limit',0.8)
 		self.xspeed_limit = self.get_parameter('xspeed_limit').get_parameter_value().double_value
 		self.yspeed_limit = self.get_parameter('yspeed_limit').get_parameter_value().double_value
 		self.angular_speed_limit = self.get_parameter('angular_speed_limit').get_parameter_value().double_value
@@ -168,8 +168,7 @@ class JoyTeleop(Node):
 
 
 	def filter_data(self, value):
-		if abs(value) < 0.2: value = 0
-		return value
+		return (value ** 2.5) if value >= 0 else -((-value) ** 2.5)
 		
 	def toggle_drive_state(self):
 		now_time = time.time()

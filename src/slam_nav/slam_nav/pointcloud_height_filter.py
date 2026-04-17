@@ -19,6 +19,17 @@ Parameters:
 - voxel_leaf_size: Voxel grid downsampling size in meters, 0 to disable (default: 0.03)
 """
 
+# Cap BLAS/OpenMP thread pools BEFORE numpy is imported. The per-frame
+# matmul is a trivial (3,3)@(3,N) operation; OpenBLAS's default policy of
+# spawning one thread per core costs more than the work itself (measured:
+# 6 threads at ~80% each, ~455% total CPU). Single-threaded is strictly
+# faster for this workload and frees cores for the rest of the ROS stack.
+import os
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2, PointField
@@ -51,6 +62,14 @@ class PointCloudHeightFilter(Node):
         self.tf_buffer = Buffer(cache_time=Duration(seconds=10.0))
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
+        # Cache: camera-optical-frame → target_frame transform. The camera is
+        # rigidly mounted so this is effectively static.
+        self._cached_frame_id = None
+        self._cached_rot_T = None          # pre-transposed for points @ rot.T
+        self._cached_translation = None
+        self._cached_field_layout = None   # (point_step, ox, oy, oz)
+        self._cached_xyz_contiguous = None # whether xyz is contiguous in the point buffer
+
         self.subscription = self.create_subscription(
             PointCloud2,
             self.input_topic,
@@ -63,53 +82,105 @@ class PointCloudHeightFilter(Node):
         self.error_count = 0
         self.get_logger().info(
             f'Height filter started: {self.input_topic} -> {self.output_topic} '
-            f'height=[{self.min_height}, {self.max_height}] voxel={self.voxel_leaf_size}'
+            f'height=[{self.min_height}, {self.max_height}] voxel={self.voxel_leaf_size} '
+            f'threads=1'
         )
 
+    def _ensure_transform(self, source_frame):
+        if self._cached_frame_id == source_frame and self._cached_rot_T is not None:
+            return True
+        try:
+            tf = self.tf_buffer.lookup_transform(
+                self.target_frame,
+                source_frame,
+                rclpy.time.Time(),
+                timeout=Duration(seconds=0.05)
+            )
+        except (LookupException, ConnectivityException, ExtrapolationException) as e:
+            self.error_count += 1
+            if self.error_count % 30 == 0:
+                self.get_logger().warn(f'TF lookup failed: {e}')
+            return False
+
+        q = tf.transform.rotation
+        t = tf.transform.translation
+        rot = np.array([
+            [1 - 2*(q.y**2 + q.z**2),   2*(q.x*q.y - q.z*q.w),   2*(q.x*q.z + q.y*q.w)],
+            [    2*(q.x*q.y + q.z*q.w), 1 - 2*(q.x**2 + q.z**2),   2*(q.y*q.z - q.x*q.w)],
+            [    2*(q.x*q.z - q.y*q.w),   2*(q.y*q.z + q.x*q.w), 1 - 2*(q.x**2 + q.y**2)],
+        ], dtype=np.float32)
+        self._cached_rot_T = np.ascontiguousarray(rot.T)
+        self._cached_translation = np.array([t.x, t.y, t.z], dtype=np.float32)
+        self._cached_frame_id = source_frame
+        return True
+
     def _pointcloud2_to_xyz(self, msg):
-        """Extract xyz as (N,3) float32 numpy array from PointCloud2, skipping NaNs if requested."""
-        field_map = {f.name: f.offset for f in msg.fields}
-        ox, oy, oz = field_map['x'], field_map['y'], field_map['z']
-        point_step = msg.point_step
+        """Zero-copy xyz extraction from PointCloud2 into a float32 (N,3) array."""
+        layout = self._cached_field_layout
+        if layout is None or layout[0] != msg.point_step:
+            field_map = {f.name: f.offset for f in msg.fields}
+            ox, oy, oz = field_map['x'], field_map['y'], field_map['z']
+            layout = (msg.point_step, ox, oy, oz)
+            self._cached_field_layout = layout
+            # Standard layout: x/y/z contiguous float32 at the start of each point.
+            self._cached_xyz_contiguous = (ox == 0 and oy == 4 and oz == 8)
+        point_step, ox, oy, oz = layout
+
         n_points = msg.width * msg.height
 
-        # Read as uint8, reshape to (N, point_step), then extract float32 columns by byte offset
-        data = np.frombuffer(msg.data, dtype=np.uint8).reshape(n_points, point_step)
-        x = data[:, ox:ox+4].copy().view(np.float32).reshape(-1)
-        y = data[:, oy:oy+4].copy().view(np.float32).reshape(-1)
-        z = data[:, oz:oz+4].copy().view(np.float32).reshape(-1)
-        points = np.stack([x, y, z], axis=1)  # (N, 3)
+        if self._cached_xyz_contiguous and point_step == 12:
+            # Tightly-packed xyz points, no padding: reinterpret the buffer
+            # directly, no copy.
+            xyz = np.frombuffer(msg.data, dtype=np.float32).reshape(n_points, 3)
+        elif self._cached_xyz_contiguous:
+            # xyz contiguous but with per-point padding (e.g. RGB, normals):
+            # reinterpret the whole buffer as a structured view of shape
+            # (N, point_step/4) and take the first 3 float columns.
+            quads = point_step // 4
+            if point_step % 4 == 0:
+                all_floats = np.frombuffer(msg.data, dtype=np.float32).reshape(n_points, quads)
+                # Slicing a view here does not copy; arithmetic below triggers
+                # at most one materialisation.
+                xyz = all_floats[:, :3]
+            else:
+                xyz = self._extract_xyz_fallback(msg.data, n_points, point_step, ox, oy, oz)
+        else:
+            xyz = self._extract_xyz_fallback(msg.data, n_points, point_step, ox, oy, oz)
 
         if self.filter_nans:
-            valid = np.isfinite(points).all(axis=1)
-            points = points[valid]
+            xyz = xyz[np.isfinite(xyz).all(axis=1)]
+        return xyz
 
-        return points
+    @staticmethod
+    def _extract_xyz_fallback(data_bytes, n_points, point_step, ox, oy, oz):
+        """Per-axis extraction when xyz are not contiguous."""
+        raw = np.frombuffer(data_bytes, dtype=np.uint8).reshape(n_points, point_step)
+        x = raw[:, ox:ox+4].copy().view(np.float32).reshape(-1)
+        y = raw[:, oy:oy+4].copy().view(np.float32).reshape(-1)
+        z = raw[:, oz:oz+4].copy().view(np.float32).reshape(-1)
+        return np.stack([x, y, z], axis=1)
 
     def _xyz_to_pointcloud2(self, points, frame_id, stamp):
-        """Pack (N,3) float32 numpy array into a PointCloud2 message."""
         msg = PointCloud2()
         msg.header = Header(frame_id=frame_id, stamp=stamp)
         msg.height = 1
         msg.width = len(points)
         msg.is_dense = True
         msg.is_bigendian = False
-        msg.point_step = 12  # 3 × float32
+        msg.point_step = 12
         msg.row_step = msg.point_step * msg.width
         msg.fields = [
             PointField(name='x', offset=0,  datatype=PointField.FLOAT32, count=1),
             PointField(name='y', offset=4,  datatype=PointField.FLOAT32, count=1),
             PointField(name='z', offset=8,  datatype=PointField.FLOAT32, count=1),
         ]
-        msg.data = points.astype(np.float32).tobytes()
+        msg.data = np.ascontiguousarray(points, dtype=np.float32).tobytes()
         return msg
 
     def _voxel_grid(self, points, leaf_size):
-        """Vectorised voxel grid: one representative point per voxel (first-point, not centroid)."""
         if len(points) == 0:
             return points
         voxel_idx = np.floor(points / leaf_size).astype(np.int32)
-        # Pack three int32 columns into one int64 key for unique()
         keys = (voxel_idx[:, 0].astype(np.int64) * 1_000_003 +
                 voxel_idx[:, 1].astype(np.int64) * 1_009 +
                 voxel_idx[:, 2].astype(np.int64))
@@ -120,37 +191,20 @@ class PointCloudHeightFilter(Node):
         try:
             self.frame_count += 1
 
-            try:
-                transform = self.tf_buffer.lookup_transform(
-                    self.target_frame,
-                    msg.header.frame_id,
-                    rclpy.time.Time(),
-                    timeout=Duration(seconds=0.05)
-                )
-            except (LookupException, ConnectivityException, ExtrapolationException) as e:
-                self.error_count += 1
-                if self.error_count % 30 == 0:
-                    self.get_logger().warn(f'TF lookup failed: {e}')
+            if not self._ensure_transform(msg.header.frame_id):
                 return
 
             points = self._pointcloud2_to_xyz(msg)
             if len(points) == 0:
                 return
 
-            # Build rotation matrix from quaternion
-            q = transform.transform.rotation
-            t = transform.transform.translation
-            rot = np.array([
-                [1 - 2*(q.y**2 + q.z**2),   2*(q.x*q.y - q.z*q.w),   2*(q.x*q.z + q.y*q.w)],
-                [    2*(q.x*q.y + q.z*q.w), 1 - 2*(q.x**2 + q.z**2),   2*(q.y*q.z - q.x*q.w)],
-                [    2*(q.x*q.z - q.y*q.w),   2*(q.y*q.z + q.x*q.w), 1 - 2*(q.x**2 + q.y**2)],
-            ], dtype=np.float64)
+            # points @ rot.T  ≡  (rot @ points.T).T, but reads more naturally
+            # as "rotate each point". Kept in float32 throughout.
+            transformed = points @ self._cached_rot_T + self._cached_translation
 
-            transformed = (rot @ points.T).T + np.array([t.x, t.y, t.z])
-
-            # Height filter (z in target frame)
-            mask = (transformed[:, 2] >= self.min_height) & (transformed[:, 2] <= self.max_height)
-            filtered = transformed[mask].astype(np.float32)
+            z = transformed[:, 2]
+            mask = (z >= self.min_height) & (z <= self.max_height)
+            filtered = transformed[mask]
 
             if self.voxel_leaf_size > 0:
                 filtered = self._voxel_grid(filtered, self.voxel_leaf_size)
@@ -161,7 +215,6 @@ class PointCloudHeightFilter(Node):
             self.publisher.publish(
                 self._xyz_to_pointcloud2(filtered, self.target_frame, msg.header.stamp)
             )
-
 
         except Exception as e:
             self.get_logger().error(f'Error processing point cloud: {e}')
