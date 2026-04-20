@@ -24,7 +24,7 @@ class JoyTeleop(Node):
 		self.cancel_time = time.time()
 		self.user_name = getpass.getuser()
 		print(self.user_name)
-		self.linear_speed = 1.0
+		self.linear_speed = 0.7
 		self.angular_speed = 1.0
 		
 		# Button state tracking for edge detection
