@@ -1,32 +1,26 @@
 #!/usr/bin/env python3
 
-"""
-Robot Hardware Launch File
-Brings up the complete robot hardware system.
+"""SLAM/Nav bringup.
 
-Includes:
-- Complete robot hardware (drivers, sensors, lidar)
-- Intel RealSense D435i camera
-- EKF sensor fusion (odom_raw -> odom + TF)
-- Point cloud height filter
-- Robot interface node for client control
+Assumes robot_hardware.service is already running at boot (MCU driver + joystick
++ base_node). This launch brings up everything else needed for SLAM/Nav:
+URDF/TF publishing, camera, lidar, EKF, pointcloud filter, and interface nodes.
 
-SLAM and Nav2 run on the workstation, not here.
+SLAM and Nav2 themselves run on the workstation.
 """
 
 import os
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory, get_package_share_path
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, GroupAction,
                           IncludeLaunchDescription, SetEnvironmentVariable, TimerAction)
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import Command, LaunchConfiguration
 
 
 def generate_launch_description():
-    slam_nav_dir = get_package_share_directory("slam_nav")
-
     log_level = LaunchConfiguration("log_level")
 
     stdout_linebuf_envvar = SetEnvironmentVariable(
@@ -37,14 +31,71 @@ def generate_launch_description():
         default_value="info",
         description="log level")
 
-    robot_bringup_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory("yahboomcar_bringup"), "launch", "robot_bringup_launch.py"))
+    # URDF / TF
+    urdf_path = get_package_share_path('yahboomcar_description') / 'urdf/yahboomcar_X3_simple.urdf'
+    robot_description = ParameterValue(Command(['xacro ', str(urdf_path)]), value_type=str)
+
+    robot_state_publisher_node = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        output='screen',
+        parameters=[{'robot_description': robot_description}],
+    )
+    joint_state_publisher_node = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher',
     )
 
+    # EKF (odom_raw -> odom + TF)
     ekf_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory("yahboomcar_bringup"), "launch", "ekf_x1_x3_launch.py"))
+            os.path.join(get_package_share_directory("yahboomcar_bringup"),
+                         "launch", "ekf_x1_x3_launch.py"))
+    )
+
+    # Lidar
+    lidar_node = Node(
+        package="sllidar_ros2",
+        executable="sllidar_node",
+        name="sllidar_node",
+        output="screen",
+        parameters=[{
+            "channel_type": "serial",
+            "serial_port": "/dev/rplidar",
+            "serial_baudrate": 1000000,
+            "frame_id": "laser_link",
+            "inverted": False,
+            "angle_compensate": True,
+            "scan_mode": "Standard",
+            "use_sim_time": False,
+        }],
+    )
+
+    # RealSense camera
+    realsense_config_file = os.path.join(
+        get_package_share_directory("slam_nav"), "config", "realsense_params.yaml"
+    )
+    camera_node = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            os.path.join(get_package_share_directory("realsense2_camera"), "launch"),
+            "/rs_launch.py"
+        ]),
+        launch_arguments={
+            "config_file": realsense_config_file,
+            "camera_name": "realsense_camera",
+            "camera_namespace": "",
+            "publish_tf": "true",
+            "tf_publish_rate": "0.0",
+        }.items()
+    )
+    camera_tf_node = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="camera_base_tf",
+        arguments=["0", "0", "0", "0", "0", "0",
+                   "camera_link", "realsense_camera_realsense_camera_link"],
     )
 
     pointcloud_height_filter_node = Node(
@@ -59,7 +110,7 @@ def generate_launch_description():
             "min_height": 0.02,
             "max_height": 0.25,
             "filter_nans": True,
-            "voxel_leaf_size": 0.03
+            "voxel_leaf_size": 0.03,
         }],
         arguments=["--ros-args", "--log-level", log_level]
     )
@@ -72,27 +123,30 @@ def generate_launch_description():
         arguments=["--ros-args", "--log-level", log_level]
     )
 
-    delayed_pointcloud_group = TimerAction(
-        period=10.0,
-        actions=[GroupAction([pointcloud_height_filter_node])]
-    )
-
-    delayed_interface_group = TimerAction(
-        period=8.0,
-        actions=[GroupAction([robot_interface_node])]
-    )
-
-
     display_status_node = Node(
         package="slam_nav",
         executable="display_status_node",
         name="display_status_node",
         output="screen",
     )
+
+    delayed_pointcloud_group = TimerAction(
+        period=10.0,
+        actions=[GroupAction([pointcloud_height_filter_node])]
+    )
+    delayed_interface_group = TimerAction(
+        period=8.0,
+        actions=[GroupAction([robot_interface_node])]
+    )
+
     return LaunchDescription([
         stdout_linebuf_envvar,
         declare_log_level_cmd,
-        robot_bringup_cmd,
+        robot_state_publisher_node,
+        joint_state_publisher_node,
+        lidar_node,
+        camera_node,
+        camera_tf_node,
         ekf_cmd,
         delayed_pointcloud_group,
         delayed_interface_group,
