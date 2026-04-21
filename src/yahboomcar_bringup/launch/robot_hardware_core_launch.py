@@ -22,6 +22,9 @@ def generate_launch_description():
     odometry_config = os.path.join(
         get_package_share_directory('yahboomcar_base_node'), 'config', 'odometry_scaling.yaml'
     )
+    joy_config = os.path.join(
+        get_package_share_directory('yahboomcar_bringup'), 'config', 'joy_params.yaml'
+    )
 
     return LaunchDescription([
         Node(
@@ -49,5 +52,6 @@ def generate_launch_description():
             executable='yahboom_joy_X3',
             name='yahboom_joy',
             output='screen',
+            parameters=[joy_config],
         ),
     ])

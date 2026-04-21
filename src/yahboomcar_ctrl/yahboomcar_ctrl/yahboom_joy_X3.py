@@ -24,8 +24,7 @@ class JoyTeleop(Node):
 		self.cancel_time = time.time()
 		self.user_name = getpass.getuser()
 		print(self.user_name)
-		self.linear_speed = 0.7
-		self.angular_speed = 1.0
+		# Gear lists and speed limits are declared further down as ROS params.
 		
 		# Button state tracking for edge detection
 		self.prev_rgb_button_state = False
@@ -50,13 +49,24 @@ class JoyTeleop(Node):
 		#create service client for robot commands
 		self.robot_command_client = self.create_client(ExecuteCommand, '/robot/execute_command')
 		
-		#declare parameter and get the value
-		self.declare_parameter('xspeed_limit',0.5)
-		self.declare_parameter('yspeed_limit',0.5)
-		self.declare_parameter('angular_speed_limit',0.8)
+		# Declare parameters (overridable from yaml). Ceilings are hard clamps;
+		# gear lists are the values cycled by the stick-click buttons.
+		self.declare_parameter('xspeed_limit', 1.0)
+		self.declare_parameter('yspeed_limit', 1.0)
+		self.declare_parameter('angular_speed_limit', 1.0)
+		self.declare_parameter('linear_gears', [0.5, 1.0])
+		self.declare_parameter('angular_gears', [0.5, 1.0])
 		self.xspeed_limit = self.get_parameter('xspeed_limit').get_parameter_value().double_value
 		self.yspeed_limit = self.get_parameter('yspeed_limit').get_parameter_value().double_value
 		self.angular_speed_limit = self.get_parameter('angular_speed_limit').get_parameter_value().double_value
+		self._linear_gears = list(self.get_parameter('linear_gears').get_parameter_value().double_array_value)
+		self._angular_gears = list(self.get_parameter('angular_gears').get_parameter_value().double_array_value)
+		self.linear_speed = self._linear_gears[-1]
+		self.angular_speed = self._angular_gears[-1]
+		self.get_logger().info(
+			f"Joy config: linear_gears={self._linear_gears} angular_gears={self._angular_gears} "
+			f"ceilings x={self.xspeed_limit} y={self.yspeed_limit} ang={self.angular_speed_limit}"
+		)
 		
 	def setup_control_mappings(self):
 		"""Setup joystick control mappings for different controller types"""
@@ -122,16 +132,21 @@ class JoyTeleop(Node):
 			
 		# Linear gear control - detect button press transition
 		if current_linear_button and not self.prev_linear_button_state:
-			if self.linear_speed == 1.0: self.linear_speed = 1.0 / 3
-			elif self.linear_speed == 1.0 / 3: self.linear_speed = 2.0 / 3
-			elif self.linear_speed == 2.0 / 3: self.linear_speed = 1
-			
+			try:
+				i = self._linear_gears.index(self.linear_speed)
+			except ValueError:
+				i = -1
+			self.linear_speed = self._linear_gears[(i + 1) % len(self._linear_gears)]
+			self.get_logger().warning(f"Linear gear -> {self.linear_speed:.3f}")
+
 		# Angular gear control - detect button press transition
 		if current_angular_button and not self.prev_angular_button_state:
-			if self.angular_speed == 1.0: self.angular_speed = 1.0 / 4
-			elif self.angular_speed == 1.0 / 4: self.angular_speed = 1.0 / 2
-			elif self.angular_speed == 1.0 / 2: self.angular_speed = 3.0 / 4
-			elif self.angular_speed == 3.0 / 4: self.angular_speed = 1.0
+			try:
+				i = self._angular_gears.index(self.angular_speed)
+			except ValueError:
+				i = -1
+			self.angular_speed = self._angular_gears[(i + 1) % len(self._angular_gears)]
+			self.get_logger().warning(f"Angular gear -> {self.angular_speed:.3f}")
 
 		# B button - Stop command - detect button press transition
 		if current_b_button and not self.prev_b_button_state:
@@ -144,10 +159,13 @@ class JoyTeleop(Node):
 		self.prev_angular_button_state = current_angular_button
 		self.prev_b_button_state = current_b_button
 			
-		# Get movement values using named axes
-		xlinear_speed = self.filter_data(self.get_axis_value(joy_data, 'joy_left_y')) * self.xspeed_limit * self.linear_speed
-		ylinear_speed = self.filter_data(self.get_axis_value(joy_data, 'joy_left_x')) * self.yspeed_limit * self.linear_speed
-		angular_speed = self.filter_data(self.get_axis_value(joy_data, 'joy_right_x')) * self.angular_speed_limit * self.angular_speed
+		# Get movement values using named axes.
+		# linear_speed / angular_speed are the max m/s and rad/s at full stick.
+		# xspeed_limit / yspeed_limit / angular_speed_limit are safety ceilings
+		# clamped below and can't be exceeded by the gear list.
+		xlinear_speed = self.filter_data(self.get_axis_value(joy_data, 'joy_left_y')) * self.linear_speed
+		ylinear_speed = self.filter_data(self.get_axis_value(joy_data, 'joy_left_x')) * self.linear_speed
+		angular_speed = self.filter_data(self.get_axis_value(joy_data, 'joy_right_x')) * self.angular_speed
 		
 		# Apply speed limits
 		if xlinear_speed > self.xspeed_limit: xlinear_speed = self.xspeed_limit
@@ -166,6 +184,8 @@ class JoyTeleop(Node):
 			# print("joy control now")
 			for i in range(3): self.pub_cmdVel.publish(twist)
 
+		if xlinear_speed or ylinear_speed or angular_speed:
+			self.get_logger().info(f"Speed: {xlinear_speed:.2f} m/s, {ylinear_speed:.2f} m/s, {angular_speed:.2f} rad/s")
 
 	def filter_data(self, value):
 		return (value ** 2.5) if value >= 0 else -((-value) ** 2.5)
