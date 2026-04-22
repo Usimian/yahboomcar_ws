@@ -11,9 +11,9 @@ publish_tf: true
 tf_publish_rate: 0.0
 base_frame_id: "realsense_camera_link"
 clip_distance: 5.0
-pointcloud__neon_.enable: true
-pointcloud__neon_.allow_no_texture_points: true
-pointcloud__neon_.stream_filter: 2
+pointcloud.enable: true
+pointcloud.allow_no_texture_points: true
+pointcloud.stream_filter: 2
 wait_for_device_timeout: -1.0
 reconnect_timeout: -1.0
 depth_module.enable_auto_exposure: true
