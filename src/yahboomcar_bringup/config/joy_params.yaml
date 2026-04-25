@@ -7,5 +7,6 @@ yahboom_joy:
 
     # Gear values cycled by the stick-click buttons. Units: m/s for linear, rad/s for angular.
     # Full stick deflection at gear N yields exactly gear[N] m/s or rad/s (before the ceiling clamp).
-    linear_gears: [1.0, 1.5, 0.5]
+    # last element is the startup value
+    linear_gears: [1.0, 1.5, 0.4]
     angular_gears: [2.0, 0.6, 1.0]

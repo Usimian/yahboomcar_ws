@@ -4,6 +4,7 @@
 #public lib
 import time
 import getpass
+import subprocess
 
 #ros lib
 import rclpy
@@ -32,6 +33,11 @@ class JoyTeleop(Node):
 		self.prev_angular_button_state = False
 		self.prev_start_button_state = False
 		self.prev_b_button_state = False
+
+		# Start-button long-hold -> shutdown
+		self.start_hold_begin = None		# monotonic time when start was first pressed
+		self.shutdown_triggered = False		# latches once poweroff has fired
+		self.SHUTDOWN_HOLD_SECONDS = 5.0
 		
 		# Define joystick control mappings
 		self.setup_control_mappings()
@@ -117,9 +123,26 @@ class JoyTeleop(Node):
 		current_angular_button = self.get_button_state(joy_data, 'right_joystick_button')
 		current_b_button = self.get_button_state(joy_data, 'b_button')
 		
-		# Drive on/off - detect button press transition
+		# Start button:
+		#   - Short press (<5s): toggle drive state on release (normal behavior)
+		#   - Long hold (>=5s): beep twice and poweroff
 		if current_start_button and not self.prev_start_button_state:
-			self.toggle_drive_state()
+			# Press edge: begin hold timer, don't toggle yet
+			self.start_hold_begin = time.monotonic()
+			self.shutdown_triggered = False
+		elif current_start_button and self.prev_start_button_state:
+			# Still held: check for long-hold shutdown
+			if (not self.shutdown_triggered
+					and self.start_hold_begin is not None
+					and time.monotonic() - self.start_hold_begin >= self.SHUTDOWN_HOLD_SECONDS):
+				self.shutdown_triggered = True
+				self.trigger_shutdown()
+		elif not current_start_button and self.prev_start_button_state:
+			# Release edge: toggle drive only if we didn't long-hold
+			if not self.shutdown_triggered:
+				self.toggle_drive_state()
+			self.start_hold_begin = None
+			self.shutdown_triggered = False
 			
 		# RGB Light control - detect button press transition
 		if current_rgb_button and not self.prev_rgb_button_state:
@@ -223,6 +246,25 @@ class JoyTeleop(Node):
 			self.pub_JoyState.publish(Joy_ctrl)
 			self.pub_cmdVel.publish(Twist())
 			self.cancel_time = now_time
+
+	def trigger_shutdown(self):
+		"""Beep twice and power off the robot (start button held >=5s)."""
+		self.get_logger().warning("⏻ Start button held — powering off")
+		# Stop the robot first
+		self.pub_cmdVel.publish(Twist())
+		# Two beeps
+		beep_msg = Bool()
+		for _ in range(2):
+			beep_msg.data = True
+			self.pub_Buzzer.publish(beep_msg)
+			time.sleep(0.25)
+			beep_msg.data = False
+			self.pub_Buzzer.publish(beep_msg)
+			time.sleep(0.15)
+		try:
+			subprocess.Popen(['sudo', '-n', '/usr/sbin/poweroff'])
+		except Exception as e:
+			self.get_logger().error(f"poweroff failed: {e}")
 
 	def execute_stop_command(self):
 		"""Execute stop command via robot interface service"""

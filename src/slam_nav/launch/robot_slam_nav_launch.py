@@ -73,6 +73,8 @@ def generate_launch_description():
         }],
     )
 
+
+
     # RealSense camera
     realsense_config_file = os.path.join(
         get_package_share_directory("slam_nav"), "config", "realsense_params.yaml"
