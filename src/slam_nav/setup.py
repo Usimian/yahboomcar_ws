@@ -35,6 +35,7 @@ setup(
             'robot_interface_node = slam_nav.robot_interface_node:main',
             'calibration_test = slam_nav.calibration_test:main',
             'pointcloud_height_filter = slam_nav.pointcloud_height_filter:main',
+            'realsense_watchdog = slam_nav.realsense_watchdog:main',
             'display_status_node = slam_nav.display_status_node:main',
         ],
     },

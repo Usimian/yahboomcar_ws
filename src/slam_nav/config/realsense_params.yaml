@@ -4,7 +4,7 @@ enable_infra1: false
 enable_infra2: false
 enable_gyro: false
 enable_accel: false
-depth_module.depth_profile: "424x240x15"
+depth_module.depth_profile: "480x270x15"
 rgb_camera.color_profile: "640x480x15"
 align_depth.enable: true
 publish_tf: true

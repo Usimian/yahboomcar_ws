@@ -132,6 +132,20 @@ def generate_launch_description():
         output="screen",
     )
 
+    # RealSense depth-stream watchdog: USB-resets the camera if depth stops
+    # publishing for 5 seconds. Works around the well-known librealsense bug
+    # where the depth pipeline silently stalls on D435/D435i.
+    realsense_watchdog_node = Node(
+        package="slam_nav",
+        executable="realsense_watchdog",
+        name="realsense_watchdog",
+        output="screen",
+    )
+    delayed_watchdog_group = TimerAction(
+        period=15.0,
+        actions=[GroupAction([realsense_watchdog_node])],
+    )
+
     delayed_pointcloud_group = TimerAction(
         period=10.0,
         actions=[GroupAction([pointcloud_height_filter_node])]
@@ -151,6 +165,7 @@ def generate_launch_description():
         camera_tf_node,
         ekf_cmd,
         delayed_pointcloud_group,
+        delayed_watchdog_group,
         delayed_interface_group,
         display_status_node,
     ])
