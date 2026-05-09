@@ -14,7 +14,7 @@ from Rosmaster_Lib import Rosmaster
 #ros lib
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String,Float32,Int32,Bool,UInt8MultiArray
+from std_msgs.msg import String,Float32,Int32,Bool
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu,MagneticField, JointState
 from rclpy.clock import Clock
@@ -83,7 +83,6 @@ class yahboomcar_driver(Node):
 		self.sub_cmd_vel = self.create_subscription(Twist,"cmd_vel",self.cmd_vel_callback,1)
 		self.sub_RGBLight = self.create_subscription(Int32,"RGBLight",self.RGBLightcallback,100)
 		self.sub_BUzzer = self.create_subscription(Bool,"Buzzer",self.Buzzercallback,100)
-		self.sub_LedCommand = self.create_subscription(UInt8MultiArray,"led_command",self.LedCommandCallback,10)
 
 		#create publisher
 		self.EdiPublisher = self.create_publisher(Float32,"edition",100)
@@ -189,20 +188,6 @@ class yahboomcar_driver(Node):
 			for i in range(3): self.car.set_beep(1)
 		else:
 			for i in range(3): self.car.set_beep(0)
-
-	def LedCommandCallback(self, msg):
-		# /led_command: flat UInt8 array of [index, R, G, B] groups.
-		# index 0xFF = all LEDs. Stops any active effect first.
-		if not isinstance(msg, UInt8MultiArray): return
-		data = list(msg.data)
-		if len(data) % 4 != 0:
-			self.get_logger().warn(f"led_command length {len(data)} not multiple of 4, ignoring")
-			return
-		# Effect mode masks per-LED writes — clear it before any direct write.
-		self.car.set_colorful_effect(0, 6, parm=1)
-		for i in range(0, len(data), 4):
-			idx, r, g, b = data[i], data[i+1], data[i+2], data[i+3]
-			self.car.set_colorful_lamps(idx, r, g, b)
 
 	def get_battery_voltage_callback(self, request, response):
 		"""Service callback to provide battery voltage to other nodes"""

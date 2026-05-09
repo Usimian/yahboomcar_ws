@@ -12,7 +12,7 @@ SLAM and Nav2 themselves run on the workstation.
 import os
 from ament_index_python.packages import get_package_share_directory, get_package_share_path
 from launch import LaunchDescription
-from launch.actions import (DeclareLaunchArgument, GroupAction,
+from launch.actions import (ExecuteProcess, DeclareLaunchArgument, GroupAction,
                           IncludeLaunchDescription, SetEnvironmentVariable, TimerAction)
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -25,6 +25,10 @@ def generate_launch_description():
 
     stdout_linebuf_envvar = SetEnvironmentVariable(
         "RCUTILS_LOGGING_BUFFERED_STREAM", "1")
+    # Drop the redundant [node_name] tag from log lines — the launch prefix
+    # already shows which process the line came from.
+    log_format_envvar = SetEnvironmentVariable(
+        "RCUTILS_CONSOLE_OUTPUT_FORMAT", "[{severity} {time}] {message}")
 
     declare_log_level_cmd = DeclareLaunchArgument(
         "log_level",
@@ -150,6 +154,38 @@ def generate_launch_description():
         period=10.0,
         actions=[GroupAction([pointcloud_height_filter_node])]
     )
+    color_compressor_node = ExecuteProcess(
+        name='color_compressor',
+        cmd=[
+            '/opt/ros/humble/lib/image_transport/republish',
+            'raw', 'compressed',
+            '--ros-args',
+            '-r', '__node:=color_compressor',
+            '-r', 'in:=/realsense_camera/color/image_raw',
+            '-r', 'out/compressed:=/realsense_camera/color/image_raw/compressed',
+        ],
+        output='screen',
+    )
+    delayed_compressor_group = TimerAction(
+        period=12.0,
+        actions=[GroupAction([color_compressor_node])],
+    )
+    depth_compressor_node = ExecuteProcess(
+        name='depth_compressor',
+        cmd=[
+            '/opt/ros/humble/lib/image_transport/republish',
+            'raw', 'compressedDepth',
+            '--ros-args',
+            '-r', '__node:=depth_compressor',
+            '-r', 'in:=/realsense_camera/aligned_depth_to_color/image_raw',
+            '-r', 'out/compressedDepth:=/realsense_camera/aligned_depth_to_color/image_raw/compressedDepth',
+        ],
+        output='screen',
+    )
+    delayed_depth_compressor_group = TimerAction(
+        period=12.0,
+        actions=[GroupAction([depth_compressor_node])],
+    )
     delayed_interface_group = TimerAction(
         period=8.0,
         actions=[GroupAction([robot_interface_node])]
@@ -157,6 +193,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         stdout_linebuf_envvar,
+        log_format_envvar,
         declare_log_level_cmd,
         robot_state_publisher_node,
         joint_state_publisher_node,
@@ -167,5 +204,7 @@ def generate_launch_description():
         delayed_pointcloud_group,
         delayed_watchdog_group,
         delayed_interface_group,
+        delayed_compressor_group,
+        delayed_depth_compressor_group,
         display_status_node,
     ])
