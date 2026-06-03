@@ -34,7 +34,7 @@ class yahboomcar_driver(Node):
 		
 		# Initialize hardware with proper error handling
 		try:
-			self.car = Rosmaster(com="/dev/ttyUSB0", debug=False)
+			self.car = Rosmaster(com="/dev/myserial", debug=False)
 			self.get_logger().info("Rosmaster initialized successfully")
 		except Exception as e:
 			self.get_logger().error(f"Failed to initialize Rosmaster: {str(e)}")

@@ -12,7 +12,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 from actionlib_msgs.msg import GoalID
-from std_msgs.msg import Int32, Bool
+from std_msgs.msg import Int32, Bool, UInt8MultiArray
 from robot_msgs.srv import ExecuteCommand
 from robot_msgs.msg import RobotCommand
 
@@ -33,6 +33,8 @@ class JoyTeleop(Node):
 		self.prev_angular_button_state = False
 		self.prev_start_button_state = False
 		self.prev_b_button_state = False
+		self.prev_a_button_state = False
+		self.headlight_on = False
 
 		# Start-button long-hold -> shutdown
 		self.start_hold_begin = None		# monotonic time when start was first pressed
@@ -48,6 +50,7 @@ class JoyTeleop(Node):
 		self.pub_Buzzer = self.create_publisher(Bool,"Buzzer",  1)
 		self.pub_JoyState = self.create_publisher(Bool,"JoyState",  10)
 		self.pub_RGBLight = self.create_publisher(Int32,"RGBLight" , 10)
+		self.pub_LedCommand = self.create_publisher(UInt8MultiArray,"led_command", 10)
 		
 		#create sub
 		self.sub_Joy = self.create_subscription(Joy,'joy', self.buttonCallback,10)
@@ -84,7 +87,8 @@ class JoyTeleop(Node):
 				'select': 10,		# Buzzer
 				'left_joystick_button': 13,	# Linear gear
 				'right_joystick_button': 14,	# Angular gear
-				'b_button': 1		# Stop command
+				'b_button': 1,		# Stop command
+				'a_button': 0		# Headlight toggle (all LEDs white)
 			},
 			'axes': {
 				'joy_left_y': 1,    # Forward/backward
@@ -122,6 +126,7 @@ class JoyTeleop(Node):
 		current_linear_button = self.get_button_state(joy_data, 'left_joystick_button')
 		current_angular_button = self.get_button_state(joy_data, 'right_joystick_button')
 		current_b_button = self.get_button_state(joy_data, 'b_button')
+		current_a_button = self.get_button_state(joy_data, 'a_button')
 		
 		# Start button:
 		#   - Short press (<5s): toggle drive state on release (normal behavior)
@@ -174,10 +179,20 @@ class JoyTeleop(Node):
 		# B button - Stop command - detect button press transition
 		if current_b_button and not self.prev_b_button_state:
 			self.execute_stop_command()
+
+		# A button - Headlight toggle (all LEDs white on/off) - press transition
+		if current_a_button and not self.prev_a_button_state:
+			self.headlight_on = not self.headlight_on
+			level = 255 if self.headlight_on else 0
+			msg = UInt8MultiArray()
+			msg.data = [0xFF, level, level, level]
+			self.pub_LedCommand.publish(msg)
+			self.get_logger().warning(f"Headlight {'ON' if self.headlight_on else 'OFF'}")
 			
 		# Update previous button states for next iteration
 		self.prev_start_button_state = current_start_button
 		self.prev_rgb_button_state = current_rgb_button
+		self.prev_a_button_state = current_a_button
 		self.prev_linear_button_state = current_linear_button
 		self.prev_angular_button_state = current_angular_button
 		self.prev_b_button_state = current_b_button
