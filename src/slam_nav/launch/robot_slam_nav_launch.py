@@ -30,6 +30,15 @@ def generate_launch_description():
     log_format_envvar = SetEnvironmentVariable(
         "RCUTILS_CONSOLE_OUTPUT_FORMAT", "[{severity} {time}] {message}")
 
+    # Prepend the RSUSB-backend librealsense (built from source) so the
+    # realsense node loads it instead of the apt V4L2 build. The JetPack
+    # kernel has no hid-sensor support (CONFIG_HID_SENSOR_HUB unset), so the
+    # V4L2 backend cannot read the D435i IMU; the RSUSB build reads it over
+    # libusb. Harmless no-op if the prefix dir does not exist.
+    rsusb_ld_envvar = SetEnvironmentVariable(
+        "LD_LIBRARY_PATH",
+        "/opt/librealsense_rsusb/lib:" + os.environ.get("LD_LIBRARY_PATH", ""))
+
     declare_log_level_cmd = DeclareLaunchArgument(
         "log_level",
         default_value="info",
@@ -157,7 +166,7 @@ def generate_launch_description():
     color_compressor_node = ExecuteProcess(
         name='color_compressor',
         cmd=[
-            '/opt/ros/humble/lib/image_transport/republish',
+            os.path.join('/opt/ros', os.environ.get('ROS_DISTRO', 'jazzy'), 'lib/image_transport/republish'),
             'raw', 'compressed',
             '--ros-args',
             '-r', '__node:=color_compressor',
@@ -173,7 +182,7 @@ def generate_launch_description():
     depth_compressor_node = ExecuteProcess(
         name='depth_compressor',
         cmd=[
-            '/opt/ros/humble/lib/image_transport/republish',
+            os.path.join('/opt/ros', os.environ.get('ROS_DISTRO', 'jazzy'), 'lib/image_transport/republish'),
             'raw', 'compressedDepth',
             '--ros-args',
             '-r', '__node:=depth_compressor',
@@ -192,6 +201,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        rsusb_ld_envvar,
         stdout_linebuf_envvar,
         log_format_envvar,
         declare_log_level_cmd,
