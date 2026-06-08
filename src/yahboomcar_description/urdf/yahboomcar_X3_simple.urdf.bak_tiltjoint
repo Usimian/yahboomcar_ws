@@ -155,27 +155,9 @@
         </visual>
     </link>
     
-    <!-- Camera tilt: servo pivot -> revolute (STS3215) -> 45mm lever arm -> camera_link.
-         Fed by /camera_tilt_joint_state from camera_tilt_node (counts->rad about level=2015). -->
-    <link name="camera_tilt_pivot"/>
-    <joint name="camera_pivot_joint" type="fixed">
-        <origin xyz="0.085 0.006 0.0405" rpy="0 0 0"/>
+    <joint name="camera_joint" type="fixed">
+        <origin xyz="0.1 0.0 0.0405" rpy="0 0 0"/>
         <parent link="base_link"/>
-        <child link="camera_tilt_pivot"/>
-    </joint>
-
-    <link name="camera_tilt_link"/>
-    <joint name="camera_tilt_joint" type="revolute">
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <parent link="camera_tilt_pivot"/>
-        <child link="camera_tilt_link"/>
-        <axis xyz="0 -1 0"/>
-        <limit lower="-0.401" upper="1.204" effort="10.0" velocity="5.0"/>
-    </joint>
-
-    <joint name="camera_arm_joint" type="fixed">
-        <origin xyz="0.045 0 0" rpy="0 0 0"/>
-        <parent link="camera_tilt_link"/>
         <child link="camera_link"/>
     </joint>
 </robot> 

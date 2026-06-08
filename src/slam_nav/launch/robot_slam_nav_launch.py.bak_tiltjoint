@@ -59,7 +59,6 @@ def generate_launch_description():
         package='joint_state_publisher',
         executable='joint_state_publisher',
         name='joint_state_publisher',
-        parameters=[{'source_list': ['camera_tilt_joint_state']}],
     )
 
     # EKF (odom_raw -> odom + TF)

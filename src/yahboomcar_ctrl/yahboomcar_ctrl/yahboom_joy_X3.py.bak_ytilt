@@ -34,11 +34,7 @@ class JoyTeleop(Node):
 		self.prev_start_button_state = False
 		self.prev_b_button_state = False
 		self.prev_a_button_state = False
-		self.prev_y_button_state = False
 		self.headlight_on = False
-		# Camera tilt step (button Y): 4 fixed angles -- down, level, midway level->up, up.
-		self.tilt_positions = [1755, 2015, 2405, 2796]
-		self.tilt_index = 1			# camera homes to level (index 1); Y advances to next
 
 		# Start-button long-hold -> shutdown
 		self.start_hold_begin = None		# monotonic time when start was first pressed
@@ -55,7 +51,6 @@ class JoyTeleop(Node):
 		self.pub_JoyState = self.create_publisher(Bool,"JoyState",  10)
 		self.pub_RGBLight = self.create_publisher(Int32,"RGBLight" , 10)
 		self.pub_LedCommand = self.create_publisher(UInt8MultiArray,"led_command", 10)
-		self.pub_CameraTilt = self.create_publisher(Int32,"camera_tilt", 10)
 		
 		#create sub
 		self.sub_Joy = self.create_subscription(Joy,'joy', self.buttonCallback,10)
@@ -93,8 +88,7 @@ class JoyTeleop(Node):
 				'left_joystick_button': 13,	# Linear gear
 				'right_joystick_button': 14,	# Angular gear
 				'b_button': 1,		# Stop command
-				'a_button': 0,		# Headlight toggle (all LEDs white)
-				'y_button': 4		# Camera tilt step (cycle 4 fixed angles)
+				'a_button': 0		# Headlight toggle (all LEDs white)
 			},
 			'axes': {
 				'joy_left_y': 1,    # Forward/backward
@@ -133,8 +127,7 @@ class JoyTeleop(Node):
 		current_angular_button = self.get_button_state(joy_data, 'right_joystick_button')
 		current_b_button = self.get_button_state(joy_data, 'b_button')
 		current_a_button = self.get_button_state(joy_data, 'a_button')
-		current_y_button = self.get_button_state(joy_data, 'y_button')
-
+		
 		# Start button:
 		#   - Short press (<5s): toggle drive state on release (normal behavior)
 		#   - Long hold (>=5s): beep twice and poweroff
@@ -196,19 +189,10 @@ class JoyTeleop(Node):
 			self.pub_LedCommand.publish(msg)
 			self.get_logger().warning(f"Headlight {'ON' if self.headlight_on else 'OFF'}")
 			
-		# Y button - step camera tilt to next of 4 fixed angles - press transition
-		if current_y_button and not self.prev_y_button_state:
-			self.tilt_index = (self.tilt_index + 1) % len(self.tilt_positions)
-			tilt_msg = Int32()
-			tilt_msg.data = self.tilt_positions[self.tilt_index]
-			self.pub_CameraTilt.publish(tilt_msg)
-			self.get_logger().warning(f"Camera tilt -> {tilt_msg.data}")
-
 		# Update previous button states for next iteration
 		self.prev_start_button_state = current_start_button
 		self.prev_rgb_button_state = current_rgb_button
 		self.prev_a_button_state = current_a_button
-		self.prev_y_button_state = current_y_button
 		self.prev_linear_button_state = current_linear_button
 		self.prev_angular_button_state = current_angular_button
 		self.prev_b_button_state = current_b_button
