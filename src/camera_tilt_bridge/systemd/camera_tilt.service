@@ -1,0 +1,23 @@
+[Unit]
+# Herbie camera-tilt bridge: /camera_tilt -> /bus_servo (STS3215 on the Yahboom
+# expansion board's bus port, patched firmware). Node source is the yahboomcar_ws
+# package camera_tilt_bridge. Install:
+#   sudo cp <pkg>/systemd/camera_tilt.service /etc/systemd/system/camera_tilt.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now camera_tilt.service
+Description=Herbie camera tilt bridge (/camera_tilt -> /bus_servo)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mw
+Environment=HOME=/home/mw
+Environment=RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+Environment=CYCLONEDDS_URI=/home/mw/cyclonedds_unicast.xml
+Environment=ROS_DOMAIN_ID=0
+ExecStart=/bin/bash -lc 'source /opt/ros/jazzy/setup.bash && source /home/mw/yahboomcar_ros2/yahboomcar_ws/install/setup.bash && exec ros2 run camera_tilt_bridge camera_tilt_bridge'
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

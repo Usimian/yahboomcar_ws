@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>camera_tilt_bridge</name>
+  <version>1.0.0</version>
+  <description>Bridges /camera_tilt to /bus_servo for the STS3215 camera-tilt servo on the
+  Yahboom expansion board's bus port (patched STM32 firmware -> little-endian STS).
+  Publishes camera_tilt_joint_state for robot_state_publisher (open-loop, from commanded
+  position). Lets joystick button Y + herbie tilt-tracking drive the tilt unchanged.</description>
+  <maintainer email="marc.wester@gmail.com">mw</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
