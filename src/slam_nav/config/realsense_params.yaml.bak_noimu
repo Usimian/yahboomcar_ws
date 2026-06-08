@@ -2,10 +2,9 @@ enable_color: true
 enable_depth: true
 enable_infra1: false
 enable_infra2: false
-enable_gyro: false      # was true -- D435i IMU had 0 subscribers; its HID/motion-module
-enable_accel: false     # init produced the messenger-libusb control_transfer EAGAIN warnings.
-                        # Robot navigates on the base IMU via EKF, never the camera IMU.
-# unite_imu_method: 2   # moot with the camera IMU disabled
+enable_gyro: true
+enable_accel: true
+unite_imu_method: 2
 depth_module.depth_profile: "480x270x15"
 rgb_camera.color_profile: "424x240x15"
 align_depth.enable: true
