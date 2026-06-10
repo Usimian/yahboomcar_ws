@@ -1,0 +1,23 @@
+# D435i config for cuVSLAM VIO recording (vslam_sensors_launch.py ONLY).
+# The nav stack's config is realsense_params.yaml — this file does not affect it.
+enable_color: true
+enable_depth: true
+enable_infra1: true            # stereo IR pair for cuVSLAM
+enable_infra2: true
+enable_gyro: true              # camera IMU (RSUSB librealsense required; kernel lacks hid_sensor)
+enable_accel: true
+unite_imu_method: 2            # -> /realsense_camera/imu (linear interpolation)
+depth_module.emitter_enabled: 0  # dots corrupt visual features; depth slightly noisier
+# Stereo module shares one profile across depth+IR:
+depth_module.depth_profile: "640x360x30"
+depth_module.infra_profile: "640x360x30"
+rgb_camera.color_profile: "424x240x15"
+align_depth.enable: false      # not needed in the bag; saves CPU
+publish_tf: true
+tf_publish_rate: 0.0
+base_frame_id: "realsense_camera_link"
+clip_distance: 5.0
+wait_for_device_timeout: -1.0
+reconnect_timeout: -1.0
+depth_module.enable_auto_exposure: true
+rgb_camera.enable_auto_exposure: true

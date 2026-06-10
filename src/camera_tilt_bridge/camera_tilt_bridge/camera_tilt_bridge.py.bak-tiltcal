@@ -24,10 +24,10 @@ from sensor_msgs.msg import JointState
 
 SERVO_ID = 3
 TILT_MIN, TILT_MAX = 1755, 2796          # hard mechanical limits (host-side clamp)
-TILT_HOME = 2017                         # level (IMU-calibrated 2026-06-10, backlash-band midpoint)
+TILT_HOME = 2015                         # level
 MOVE_TIME_MS = 500                       # per-command move time sent to /bus_servo
 TILT_JOINT_NAME = "camera_tilt_joint"
-TILT_LEVEL_POS  = 2017                   # counts at level == 0 rad (IMU-calibrated)
+TILT_LEVEL_POS  = 2015                   # counts at level == 0 rad
 COUNTS_PER_DEG  = 11.38                  # 4096 / 360
 
 

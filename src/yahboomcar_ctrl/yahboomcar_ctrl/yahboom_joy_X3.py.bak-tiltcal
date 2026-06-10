@@ -37,7 +37,7 @@ class JoyTeleop(Node):
 		self.prev_y_button_state = False
 		self.headlight_on = False
 		# Camera tilt step (button Y): 4 fixed angles -- down, level, midway level->up, up.
-		self.tilt_positions = [1755, 2017, 2405, 2796]  # level=2017 IMU-calibrated 2026-06-10
+		self.tilt_positions = [1755, 2015, 2405, 2796]
 		self.tilt_index = 1			# camera homes to level (index 1); Y advances to next
 
 		# Start-button long-hold -> shutdown

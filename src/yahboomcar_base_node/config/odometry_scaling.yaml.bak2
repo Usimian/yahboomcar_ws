@@ -5,8 +5,8 @@
   ros__parameters:
     # Odometry scaling factors to correct position estimation errors
     # due to wheel slip, carpet friction, encoder inaccuracies, etc.
-    linear_scale_x: 0.984    # 7.3152m actual round-trip / 9.741m vel_raw (2026-06-10); firmware is factory-calibrated, keep ~1.0
-    linear_scale_y: 0.984    # = X; strafe not separately measured
+    linear_scale_x: 1.310    # Linear X odometry scaling factor (0.760m actual / 0.580m vel_raw)
+    linear_scale_y: 1.310    # Linear Y odometry scaling factor (assuming same for Y)
     angular_scale: 1.000       # Angular Z odometry scaling factor
     
     # Frame names for TF publishing
