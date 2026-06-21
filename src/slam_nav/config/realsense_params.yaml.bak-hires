@@ -6,8 +6,8 @@ enable_gyro: true       # camera IMU for depth-map per-frame tilt
 enable_accel: true
                         # Robot navigates on the base IMU via EKF, never the camera IMU.
 unite_imu_method: 2
-depth_module.depth_profile: "848x480x6"   # bumped from 480x270x15 for finer depth (3D mapping); 6fps to spare WiFi
-rgb_camera.color_profile: "848x480x6"     # match depth res so aligned-depth keeps full detail
+depth_module.depth_profile: "480x270x15"
+rgb_camera.color_profile: "424x240x15"
 align_depth.enable: true
 publish_tf: true
 tf_publish_rate: 0.0
