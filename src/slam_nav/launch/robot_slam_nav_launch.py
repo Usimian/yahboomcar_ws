@@ -45,7 +45,7 @@ def generate_launch_description():
         description="log level")
 
     # URDF / TF
-    urdf_path = get_package_share_path('yahboomcar_description') / 'urdf/yahboomcar_X3_simple.urdf'
+    urdf_path = get_package_share_path('yahboomcar_description') / 'urdf/yahboomcar_X3.urdf'
     robot_description = ParameterValue(Command(['xacro ', str(urdf_path)]), value_type=str)
 
     robot_state_publisher_node = Node(

@@ -23,7 +23,7 @@ def generate_launch_description():
 
     # Get package paths
     urdf_tutorial_path = get_package_share_path('yahboomcar_description')
-    default_model_path = urdf_tutorial_path / 'urdf/yahboomcar_X3_simple.urdf'
+    default_model_path = urdf_tutorial_path / 'urdf/yahboomcar_X3.urdf'
 
     # Robot description
     robot_description = ParameterValue(
