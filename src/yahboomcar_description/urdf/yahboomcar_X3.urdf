@@ -44,7 +44,7 @@
     <joint name="base_imu" type="fixed">
         <parent link="base_link"/>
         <child link="imu_link"/>
-        <origin xyz="-0.0565 0.015 0.11" rpy="0 3.1415 1.5707"/>
+        <origin xyz="0.0 0.0 0.063" rpy="0 3.1415 1.5707"/>  <!-- measured 2026-06-24: base IMU 145mm above floor, centered; rpy unchanged (chip axis orientation) -->
     </joint>
     
     <!-- Wheels -->
@@ -145,15 +145,36 @@
             <mass value="0.01"/>
             <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
         </inertial>
+        <!-- Camera body bar (blue), wide in Y like the physical RealSense -->
         <visual>
             <geometry>
-                <box size="0.03 0.1 0.03"/>
+                <box size="0.025 0.09 0.025"/>
             </geometry>
-            <material name="blue">
+            <material name="cam_blue">
                 <color rgba="0.2 0.2 0.8 1"/>
             </material>
         </visual>
     </link>
+
+    <!-- Front-direction marker on its OWN link (single visual) so RViz renders
+         its color. A red block in front of the camera = the lens / +X view
+         direction. RViz only honors per-visual materials when a link has ONE
+         visual, hence the separate link. -->
+    <link name="camera_front_marker">
+        <visual>
+            <geometry>
+                <box size="0.003 0.09 0.025"/>
+            </geometry>
+            <material name="cam_marker_red">
+                <color rgba="1 0 0 1"/>
+            </material>
+        </visual>
+    </link>
+    <joint name="camera_front_marker_joint" type="fixed">
+        <origin xyz="0.015 0 0" rpy="0 0 0"/>
+        <parent link="camera_link"/>
+        <child link="camera_front_marker"/>
+    </joint>
     
     <!-- Camera tilt: servo pivot -> revolute (STS3215) -> 45mm lever arm -> camera_link.
          Fed by /camera_tilt_joint_state from camera_tilt_node (counts->rad about level=2015). -->
@@ -169,7 +190,7 @@
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <parent link="camera_tilt_pivot"/>
         <child link="camera_tilt_link"/>
-        <axis xyz="0 1 0"/>  <!-- sign fixed 2026-06-24: down-tilt now reads down in TF (was inverted, marking floor as obstacles) -->
+        <axis xyz="0 -1 0"/>  <!-- VERIFIED in RViz 2026-06-24: model now tilts the SAME way as the physical camera. The earlier "0 1 0" tilted the model UP while the real camera went DOWN -> cloud flew up off the floor. -->
         <limit lower="-0.401" upper="1.204" effort="10.0" velocity="5.0"/>
     </joint>
 
@@ -185,6 +206,7 @@
          physical point; the driver's static TFs offset to each sensor. WITHOUT
          THIS the depth cloud frames are disconnected from base_footprint and the
          pointcloud height filter cannot place points -> floor marked as obstacles. -->
+    <link name="realsense_camera_realsense_camera_link"/>
     <joint name="camera_link_to_realsense" type="fixed">
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <parent link="camera_link"/>

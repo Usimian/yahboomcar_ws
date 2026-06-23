@@ -64,9 +64,8 @@ class PointCloudHeightFilter(Node):
 
         # Cache: camera-optical-frame → target_frame transform. The camera is
         # rigidly mounted so this is effectively static.
-        self._cached_frame_id = None
-        self._cached_rot_T = None          # pre-transposed for points @ rot.T
-        self._cached_translation = None
+        self._rot_T = None          # pre-transposed for points @ rot.T
+        self._translation = None
         self._cached_field_layout = None   # (point_step, ox, oy, oz)
         self._cached_xyz_contiguous = None # whether xyz is contiguous in the point buffer
 
@@ -87,8 +86,10 @@ class PointCloudHeightFilter(Node):
         )
 
     def _ensure_transform(self, source_frame):
-        if self._cached_frame_id == source_frame and self._cached_rot_T is not None:
-            return True
+        # The camera is on a tilt servo, so this transform changes every time the
+        # camera tilts -- it MUST be looked up live each frame, not cached. (A
+        # stale cache rotated the floor by the uncorrected tilt angle, lifting it
+        # into the obstacle band.) The TF buffer is local so per-frame lookup is cheap.
         try:
             tf = self.tf_buffer.lookup_transform(
                 self.target_frame,
@@ -109,9 +110,8 @@ class PointCloudHeightFilter(Node):
             [    2*(q.x*q.y + q.z*q.w), 1 - 2*(q.x**2 + q.z**2),   2*(q.y*q.z - q.x*q.w)],
             [    2*(q.x*q.z - q.y*q.w),   2*(q.y*q.z + q.x*q.w), 1 - 2*(q.x**2 + q.y**2)],
         ], dtype=np.float32)
-        self._cached_rot_T = np.ascontiguousarray(rot.T)
-        self._cached_translation = np.array([t.x, t.y, t.z], dtype=np.float32)
-        self._cached_frame_id = source_frame
+        self._rot_T = np.ascontiguousarray(rot.T)
+        self._translation = np.array([t.x, t.y, t.z], dtype=np.float32)
         return True
 
     def _pointcloud2_to_xyz(self, msg):
@@ -198,9 +198,7 @@ class PointCloudHeightFilter(Node):
             if len(points) == 0:
                 return
 
-            # points @ rot.T  ≡  (rot @ points.T).T, but reads more naturally
-            # as "rotate each point". Kept in float32 throughout.
-            transformed = points @ self._cached_rot_T + self._cached_translation
+            transformed = points @ self._rot_T + self._translation
 
             z = transformed[:, 2]
             mask = (z >= self.min_height) & (z <= self.max_height)

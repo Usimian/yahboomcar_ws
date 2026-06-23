@@ -13,8 +13,6 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 from actionlib_msgs.msg import GoalID
 from std_msgs.msg import Int32, Bool, UInt8MultiArray
-from robot_msgs.srv import ExecuteCommand
-from robot_msgs.msg import RobotCommand
 
 class JoyTeleop(Node):
 	def __init__(self,name):
@@ -33,12 +31,16 @@ class JoyTeleop(Node):
 		self.prev_angular_button_state = False
 		self.prev_start_button_state = False
 		self.prev_b_button_state = False
-		self.prev_a_button_state = False
-		self.prev_y_button_state = False
 		self.headlight_on = False
-		# Camera tilt step (button Y): 4 fixed angles -- down, level, midway level->up, up.
-		self.tilt_positions = [1755, 2017, 2405, 2796]  # level=2017 IMU-calibrated 2026-06-10
-		self.tilt_index = 1			# camera homes to level (index 1); Y advances to next
+		# Camera tilt: Y = up, A = down. HELD = continuous slow motion (joy_node
+		# autorepeats at 20 Hz). Step per frame is small; clamped to hard limits.
+		# 2017 = level (IMU-calibrated 2026-06-10); range [1580 (-39 deg down), 2796 (up)].
+		self.TILT_MIN = 1580
+		self.TILT_MAX = 2796
+		self.TILT_LEVEL = 2017			# IMU-calibrated level; X snaps back to it
+		self.TILT_STEP = 3			# counts/frame; ~5 deg/s at 20 Hz (11.38 counts/deg)
+		self.tilt_target = self.TILT_LEVEL	# start at level (camera homes here on boot)
+		self.prev_x_button_state = False
 
 		# Start-button long-hold -> shutdown
 		self.start_hold_begin = None		# monotonic time when start was first pressed
@@ -60,9 +62,6 @@ class JoyTeleop(Node):
 		#create sub
 		self.sub_Joy = self.create_subscription(Joy,'joy', self.buttonCallback,10)
 
-		#create service client for robot commands
-		self.robot_command_client = self.create_client(ExecuteCommand, '/robot/execute_command')
-		
 		# Declare parameters (overridable from yaml). Ceilings are hard clamps;
 		# gear lists are the values cycled by the stick-click buttons.
 		self.declare_parameter('xspeed_limit', 1.0)
@@ -92,9 +91,10 @@ class JoyTeleop(Node):
 				'select': 10,		# Buzzer
 				'left_joystick_button': 13,	# Linear gear
 				'right_joystick_button': 14,	# Angular gear
-				'b_button': 1,		# Stop command
-				'a_button': 0,		# Headlight toggle (all LEDs white)
-				'y_button': 4		# Camera tilt step (cycle 4 fixed angles)
+				'b_button': 1,		# Headlight toggle (all LEDs white)
+				'a_button': 0,		# Camera tilt DOWN (hold for continuous)
+				'x_button': 3,		# Camera tilt -> LEVEL (single press)
+				'y_button': 4		# Camera tilt UP (hold for continuous)
 			},
 			'axes': {
 				'joy_left_y': 1,    # Forward/backward
@@ -133,6 +133,7 @@ class JoyTeleop(Node):
 		current_angular_button = self.get_button_state(joy_data, 'right_joystick_button')
 		current_b_button = self.get_button_state(joy_data, 'b_button')
 		current_a_button = self.get_button_state(joy_data, 'a_button')
+		current_x_button = self.get_button_state(joy_data, 'x_button')
 		current_y_button = self.get_button_state(joy_data, 'y_button')
 
 		# Start button:
@@ -183,32 +184,40 @@ class JoyTeleop(Node):
 			self.angular_speed = self._angular_gears[(i + 1) % len(self._angular_gears)]
 			self.get_logger().warning(f"Angular gear -> {self.angular_speed:.3f}")
 
-		# B button - Stop command - detect button press transition
+		# B button - Headlight toggle (all LEDs white on/off) - press transition
 		if current_b_button and not self.prev_b_button_state:
-			self.execute_stop_command()
-
-		# A button - Headlight toggle (all LEDs white on/off) - press transition
-		if current_a_button and not self.prev_a_button_state:
 			self.headlight_on = not self.headlight_on
 			level = 255 if self.headlight_on else 0
 			msg = UInt8MultiArray()
 			msg.data = [0xFF, level, level, level]
 			self.pub_LedCommand.publish(msg)
 			self.get_logger().warning(f"Headlight {'ON' if self.headlight_on else 'OFF'}")
-			
-		# Y button - step camera tilt to next of 4 fixed angles - press transition
-		if current_y_button and not self.prev_y_button_state:
-			self.tilt_index = (self.tilt_index + 1) % len(self.tilt_positions)
-			tilt_msg = Int32()
-			tilt_msg.data = self.tilt_positions[self.tilt_index]
-			self.pub_CameraTilt.publish(tilt_msg)
-			self.get_logger().warning(f"Camera tilt -> {tilt_msg.data}")
 
-		# Update previous button states for next iteration
+		# X button - snap camera tilt back to level - press transition
+		if current_x_button and not self.prev_x_button_state:
+			self.tilt_target = self.TILT_LEVEL
+			tilt_msg = Int32()
+			tilt_msg.data = self.tilt_target
+			self.pub_CameraTilt.publish(tilt_msg)
+			self.get_logger().warning("Camera tilt -> level")
+
+		# Camera tilt - Y = up, A = down. HELD = continuous (joy_node autorepeats
+		# at 20 Hz). Nudge the target a small step per frame, clamp to hard limits,
+		# publish only when it actually changed.
+		elif current_y_button or current_a_button:
+			step = self.TILT_STEP if current_y_button else -self.TILT_STEP
+			new_target = max(self.TILT_MIN, min(self.TILT_MAX, self.tilt_target + step))
+			if new_target != self.tilt_target:
+				self.tilt_target = new_target
+				tilt_msg = Int32()
+				tilt_msg.data = self.tilt_target
+				self.pub_CameraTilt.publish(tilt_msg)
+
+		# Update previous button states for next iteration (edge-detected buttons
+		# only; Y/A tilt is level-triggered/held, so they need no prev state).
 		self.prev_start_button_state = current_start_button
 		self.prev_rgb_button_state = current_rgb_button
-		self.prev_a_button_state = current_a_button
-		self.prev_y_button_state = current_y_button
+		self.prev_x_button_state = current_x_button
 		self.prev_linear_button_state = current_linear_button
 		self.prev_angular_button_state = current_angular_button
 		self.prev_b_button_state = current_b_button
@@ -297,50 +306,6 @@ class JoyTeleop(Node):
 		except Exception as e:
 			self.get_logger().error(f"poweroff failed: {e}")
 
-	def execute_stop_command(self):
-		"""Execute stop command via robot interface service"""
-		try:
-			# Create stop command
-			command = RobotCommand()
-			command.command_type = "stop"
-
-			# Create service request
-			request = ExecuteCommand.Request()
-			request.command = command
-
-			# Send async request
-			if self.robot_command_client.service_is_ready():
-				future = self.robot_command_client.call_async(request)
-				future.add_done_callback(self.stop_command_callback)
-
-				# Triple beep for stop command
-				beep_msg = Bool()
-				for i in range(3):
-					beep_msg.data = True
-					self.pub_Buzzer.publish(beep_msg)
-					time.sleep(0.1)
-					beep_msg.data = False
-					self.pub_Buzzer.publish(beep_msg)
-					time.sleep(0.1)
-
-				self.get_logger().info("🛑 Stop command sent via B button")
-			else:
-				self.get_logger().warning("⚠️ Robot command service not ready")
-
-		except Exception as e:
-			self.get_logger().error(f"❌ Error executing stop command: {str(e)}")
-
-	def stop_command_callback(self, future):
-		"""Callback for stop command response"""
-		try:
-			response = future.result()
-			if response.success:
-				self.get_logger().info("✅ Stop command executed successfully")
-			else:
-				self.get_logger().warning(f"⚠️ Stop command failed: {response.result_message}")
-		except Exception as e:
-			self.get_logger().error(f"❌ Stop command callback error: {str(e)}")
-			
 def main():
 	rclpy.init()
 	joy_ctrl = JoyTeleop('joy_ctrl')
