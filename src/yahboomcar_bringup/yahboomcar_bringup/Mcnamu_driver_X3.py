@@ -7,6 +7,7 @@
 # import random
 # import threading
 from math import pi
+import os
 import time
 from time import sleep
 from Rosmaster_Lib import Rosmaster
@@ -145,16 +146,52 @@ class yahboomcar_driver(Node):
 		self.last_cmd_vy = 0.0  
 		self.last_cmd_angular = 0.0
 		
-		# Calibrate IMU bias by averaging readings when stationary
-		self.get_logger().info("Calibrating IMU bias...")
-		bias_samples = []
-		for i in range(50):  # Take 50 samples over 0.5 seconds
-			gx, gy, gz = self.car.get_gyroscope_data()
-			bias_samples.append(gz)
-			time.sleep(0.01)
-		
-		self.imu_angular_bias = sum(bias_samples) / len(bias_samples)
-		self.get_logger().info(f"IMU angular bias calibrated: {self.imu_angular_bias:.3f} rad/s")
+		# Calibrate the z-gyro bias by averaging readings at rest. Movement
+		# during a window corrupts the estimate, so a window is accepted only
+		# if it is QUIET (at-rest sample spread is ~0.0005 rad/s; motion is
+		# orders of magnitude larger) and the mean is plausible as a bias.
+		# Up to 3 windows are tried. A good measurement is stored on disk;
+		# if no quiet window is found (robot handled during boot), the stored
+		# value from the previous boot is used — a slightly stale bias is far
+		# closer to the truth than no correction. Zero only if neither exists.
+		self.imu_bias_file = os.path.expanduser('~/.yahboomcar_imu_z_bias')
+		self.get_logger().info("Calibrating IMU z-gyro bias...")
+		self.imu_angular_bias = 0.0
+		for attempt in range(3):
+			bias_samples = []
+			for i in range(50):  # 50 samples over 0.5 seconds
+				gx, gy, gz = self.car.get_gyroscope_data()
+				bias_samples.append(gz)
+				time.sleep(0.01)
+			mean = sum(bias_samples) / len(bias_samples)
+			spread = (sum((s - mean) ** 2 for s in bias_samples) / len(bias_samples)) ** 0.5
+			if spread < 0.005 and abs(mean) < 0.05:
+				self.imu_angular_bias = mean
+				self.get_logger().info(
+					f"IMU z-gyro bias calibrated: {mean:+.5f} rad/s (spread {spread:.5f})")
+				try:
+					with open(self.imu_bias_file, 'w') as f:
+						f.write(f"{mean:.6f}\n")
+				except OSError as e:
+					self.get_logger().warning(f"Could not store IMU bias: {e}")
+				break
+			self.get_logger().warning(
+				f"IMU bias window {attempt + 1}/3 rejected (mean {mean:+.4f}, "
+				f"spread {spread:.4f} rad/s) — robot moving? retrying")
+			time.sleep(0.5)
+		else:
+			try:
+				with open(self.imu_bias_file) as f:
+					self.imu_angular_bias = float(f.read().strip())
+				age_h = (time.time() - os.path.getmtime(self.imu_bias_file)) / 3600.0
+				self.get_logger().warning(
+					f"IMU bias calibration failed (robot moving during boot?) — "
+					f"using stored bias {self.imu_angular_bias:+.5f} rad/s "
+					f"({age_h:.1f} hours old)")
+			except (OSError, ValueError):
+				self.get_logger().error(
+					"IMU bias calibration failed and no stored value exists — "
+					"publishing uncorrected gyro (bias 0.0).")
 		
  		# Hardware speed feedback system (better than raw encoders)
 		# The robot firmware provides processed velocity feedback that accounts for
@@ -284,7 +321,9 @@ class yahboomcar_driver(Node):
 			imu.linear_acceleration.z = az
 			imu.angular_velocity.x = gx
 			imu.angular_velocity.y = gy
-			imu.angular_velocity.z = gz
+			# Apply the startup bias calibration (same correction the wheel
+			# velocity path already uses) so consumers get a drift-free rate.
+			imu.angular_velocity.z = gz - self.imu_angular_bias
 
 			mag.header.stamp = time_stamp.to_msg()
 			mag.header.frame_id = self.imu_link

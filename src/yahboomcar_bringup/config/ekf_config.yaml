@@ -13,12 +13,26 @@ ekf_filter_node:
     base_link_frame: base_footprint
     world_frame: odom
     map_frame: map
+    # Wheels: x/y translation only. Mecanum yaw comes from roller slip, so
+    # heading (yaw + vyaw) is deliberately NOT fused from wheel odom.
     odom0: odom_raw
     odom0_config: [true,  true,  false,
-                   false, false, true,
+                   false, false, false,
                    true,  true,  false,
-                   false, false, true,
+                   false, false, false,
                    false, false, false]
     odom0_queue_size: 20
     odom0_differential: false
     odom0_relative: false
+    # Base-board gyro owns heading: fuse yaw RATE only (raw IMU, no
+    # orientation estimate onboard — identity quaternion, so never fuse yaw
+    # itself). Mounting rotation is handled via the base_link->imu_link TF.
+    imu0: imu/data_raw
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_queue_size: 50
+    imu0_differential: false
+    imu0_remove_gravitational_acceleration: true
