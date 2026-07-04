@@ -105,3 +105,51 @@ Benchmark (Orin Nano @25W): YOLO12m @640 = 11 FPS fp32 / 22 FPS fp16.
 4. `colcon build` the workspace; `enable --now` the three services
 5. flash the patched MCU firmware + set servo baud=115200 (`rosmaster-sts-fw`)
 6. (optional) recreate `torch-env` for on-robot perception
+
+## Software installed outside apt (a reflash erases ALL of this — audit 2026-07-04)
+
+### Rosmaster_Lib — base-board library (wheels, IMU, battery, servos all need it)
+
+Source repo: https://github.com/Usimian/yahboom_X3_lib (keep cloned at
+`~/yahboomcar_ros2/yahboom_X3_lib`). Install:
+
+    cd ~/yahboomcar_ros2/yahboom_X3_lib/py_install_V3.3.9/py_install
+    sudo pip3 install . --break-system-packages
+
+Verify: `python3 -c "from Rosmaster_Lib import Rosmaster"` — installed version 3.3.9.
+
+### librealsense — hand-built RSUSB backend (camera is dead without it)
+
+Source lives at `~/librealsense_rsusb/librealsense`, tag `v2.58.1`, built:
+
+    cmake .. -DFORCE_RSUSB_BACKEND=true -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=false
+    make -j$(nproc) && sudo make install
+
+Then hold the apt copy so an upgrade cannot desync it from the hand-built
+library (this exact drift has silently killed the camera IMU before):
+
+    sudo apt-mark hold ros-jazzy-librealsense2
+
+Note (2026-07-04): upstream's kernel-native backend now lists JetPack 7.2 /
+L4T 39.2 support (development branch, patch-realsense-ubuntu-L4T.sh). That is
+the planned replacement for RSUSB — if it lands, this section changes.
+
+### WiFi power save OFF + 5 GHz (mandatory — powersave mimics Nav2/TF failures)
+
+`/etc/NetworkManager/conf.d/default-wifi-powersave-on.conf`:
+
+    [connection]
+    wifi.powersave = 2
+
+The robot must join the 5 GHz band; 2.4 GHz round-trip times (100–170 ms)
+break collision_monitor message pairing even with healthy chrony.
+Verify: `iw dev wlP1p1s0 get power_save` → "Power save: off".
+
+### Stable USB serial names (drivers reference these; flash wipes the rules)
+
+`/etc/udev/rules.d/99-yahboom-serial.rules`:
+
+    # RPLIDAR: Silicon Labs CP210x bridge -> /dev/rplidar
+    SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="rplidar", MODE="0666"
+    # Rosmaster X3 control board: QinHeng CH340 -> /dev/myserial
+    SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="myserial", MODE="0666"
