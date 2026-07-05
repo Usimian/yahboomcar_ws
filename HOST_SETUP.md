@@ -118,21 +118,40 @@ Source repo: https://github.com/Usimian/yahboom_X3_lib (keep cloned at
 
 Verify: `python3 -c "from Rosmaster_Lib import Rosmaster"` — installed version 3.3.9.
 
-### librealsense — hand-built RSUSB backend (camera is dead without it)
+### librealsense — kernel-native (V4L2) backend (camera is dead without it)
 
-Source lives at `~/librealsense_rsusb/librealsense`, tag `v2.58.1`, built:
+Migrated from RSUSB 2026-07-04; full procedure and rollback in llm-robot-ros
+`docs/realsense_native_migration.md`. Two pieces, BOTH required:
 
-    cmake .. -DFORCE_RSUSB_BACKEND=true -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=false
-    make -j$(nproc) && sudo make install
+**1. Patched kernel modules.** librealsense `development` branch, commit
+`8e85535dccc81dccfe29ce44373f4cb6a0706fad`, clone at `~/librealsense_native`:
 
-Then hold the apt copy so an upgrade cannot desync it from the hand-built
+    cd ~/librealsense_native && ./scripts/patch-realsense-ubuntu-L4T.sh
+
+Interactive: unplug the camera first, and accept the NVIDIA license prompt
+within 30 s. Installs patched uvcvideo/videodev/iio modules to
+`/lib/modules/$(uname -r)/extra/`; reboot to load them. Originals backed up
+at `~/module_backup_6.8.12-1021-tegra/`.
+⚠️ ANY kernel update discards these modules — re-run the patch script and
+reboot after every kernel upgrade, or the camera dies.
+
+**2. The library, built WITHOUT the RSUSB flag:**
+
+    cd ~/librealsense_native/build
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=false
+    make -j$(nproc) && sudo make install && sudo ldconfig
+
+Keep the apt copy held so an upgrade cannot desync it from the hand-built
 library (this exact drift has silently killed the camera IMU before):
 
     sudo apt-mark hold ros-jazzy-librealsense2
 
-Note (2026-07-04): upstream's kernel-native backend now lists JetPack 7.2 /
-L4T 39.2 support (development branch, patch-realsense-ubuntu-L4T.sh). That is
-the planned replacement for RSUSB — if it lands, this section changes.
+Rollback: the old RSUSB build tree is kept at `~/librealsense_rsusb`
+(tag v2.58.1, `-DFORCE_RSUSB_BACKEND=true`); restore the backed-up modules,
+`sudo depmod -a`, reboot, then `make install` from the RSUSB build dir.
+
+Verify after any change: `modinfo uvcvideo | grep filename` → `.../extra/uvcvideo.ko`,
+`rs-enumerate-devices` lists the D435i, slam_nav topics at configured rates.
 
 ### WiFi power save OFF + 5 GHz (mandatory — powersave mimics Nav2/TF failures)
 
