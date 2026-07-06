@@ -37,7 +37,7 @@ class JoyTeleop(Node):
 		# 2017 = level (IMU-calibrated 2026-06-10); range [1580 (-39 deg down), 2796 (up)].
 		self.TILT_MIN = 1580
 		self.TILT_MAX = 2796
-		self.TILT_LEVEL = 2017			# IMU-calibrated level; X snaps back to it
+		self.TILT_LEVEL = 2017			# IMU-calibrated level; X snaps back to it via /camera_tilt_precise
 		self.TILT_STEP = 3			# counts/frame; ~5 deg/s at 20 Hz (11.38 counts/deg)
 		self.tilt_target = self.TILT_LEVEL	# start at level (camera homes here on boot)
 		self.prev_x_button_state = False
@@ -58,6 +58,7 @@ class JoyTeleop(Node):
 		self.pub_RGBLight = self.create_publisher(Int32,"RGBLight" , 10)
 		self.pub_LedCommand = self.create_publisher(UInt8MultiArray,"led_command", 10)
 		self.pub_CameraTilt = self.create_publisher(Int32,"camera_tilt", 10)
+		self.pub_CameraTiltPrecise = self.create_publisher(Int32,"camera_tilt_precise", 10)	# X-snap-to-level: bridge settles from above, taking up ~2 deg gear lash
 		
 		#create sub
 		self.sub_Joy = self.create_subscription(Joy,'joy', self.buttonCallback,10)
@@ -193,13 +194,15 @@ class JoyTeleop(Node):
 			self.pub_LedCommand.publish(msg)
 			self.get_logger().warning(f"Headlight {'ON' if self.headlight_on else 'OFF'}")
 
-		# X button - snap camera tilt back to level - press transition
+		# X button - snap camera tilt back to level - press transition.
+		# Uses the PRECISE path so the bridge settles level from above and takes up
+		# the ~2 deg gear lash; a direct up-to-level move leaves the depth floor tilted.
 		if current_x_button and not self.prev_x_button_state:
 			self.tilt_target = self.TILT_LEVEL
 			tilt_msg = Int32()
 			tilt_msg.data = self.tilt_target
-			self.pub_CameraTilt.publish(tilt_msg)
-			self.get_logger().warning("Camera tilt -> level")
+			self.pub_CameraTiltPrecise.publish(tilt_msg)
+			self.get_logger().warning("Camera tilt -> level (precise)")
 
 		# Camera tilt - Y = up, A = down. HELD = continuous (joy_node autorepeats
 		# at 20 Hz). Nudge the target a small step per frame, clamp to hard limits,

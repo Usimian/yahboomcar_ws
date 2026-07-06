@@ -15,9 +15,13 @@ watchdog that USB-resets the device when streams stall.
 Parameters:
   topic                 (string) Topic to monitor. Default
                                  /realsense_camera/depth/color/points.
-  usb_device_path       (string) sysfs path to the USB device's `authorized`
-                                 file (without trailing /authorized). Default
-                                 /sys/bus/usb/devices/2-1.3.
+  usb_vendor_id         (string) USB idVendor of the camera. Default 8086.
+  usb_product_id        (string) USB idProduct of the camera. Default 0b3a.
+                                 The sysfs path is resolved by identity at
+                                 every reset: the path itself moves across
+                                 re-enumerations (2-1.3 -> 2-1.1 observed
+                                 2026-07-05, which left a hardcoded-path
+                                 watchdog resetting a nonexistent device).
   stale_threshold       (float)  Seconds without a message before triggering
                                  recovery. Default 5.0.
   warmup_sec            (float)  Grace period after node start before
@@ -26,6 +30,7 @@ Parameters:
                                  considering the topic stale again. Default
                                  10.0.
 """
+import glob
 import os
 import subprocess
 import time
@@ -41,13 +46,15 @@ class RealsenseWatchdog(Node):
         super().__init__('realsense_watchdog')
 
         self.declare_parameter('topic', '/realsense_camera/depth/color/points')
-        self.declare_parameter('usb_device_path', '/sys/bus/usb/devices/2-1.3')
+        self.declare_parameter('usb_vendor_id', '8086')
+        self.declare_parameter('usb_product_id', '0b3a')
         self.declare_parameter('stale_threshold', 5.0)
         self.declare_parameter('warmup_sec', 15.0)
         self.declare_parameter('cooldown_sec', 10.0)
 
         self.topic = self.get_parameter('topic').value
-        self.usb_path = self.get_parameter('usb_device_path').value
+        self.usb_vendor = self.get_parameter('usb_vendor_id').value
+        self.usb_product = self.get_parameter('usb_product_id').value
         self.stale_threshold = float(self.get_parameter('stale_threshold').value)
         self.warmup_sec = float(self.get_parameter('warmup_sec').value)
         self.cooldown_sec = float(self.get_parameter('cooldown_sec').value)
@@ -74,7 +81,8 @@ class RealsenseWatchdog(Node):
 
         self.get_logger().info(
             f"realsense_watchdog started. Watching {self.topic}, "
-            f"resetting {self.usb_path} after {self.stale_threshold}s of silence.")
+            f"resetting USB {self.usb_vendor}:{self.usb_product} after "
+            f"{self.stale_threshold}s of silence.")
 
     def _on_msg(self, _msg):
         self._last_msg_time = time.monotonic()
@@ -88,7 +96,8 @@ class RealsenseWatchdog(Node):
             return
         self.get_logger().warn(
             f"No depth pointcloud for {gap:.1f}s; resetting USB device "
-            f"{self.usb_path} (reset #{self._reset_count + 1}).")
+            f"{self.usb_vendor}:{self.usb_product} "
+            f"(reset #{self._reset_count + 1}).")
         ok = self._usb_reset()
         if ok:
             self._reset_count += 1
@@ -100,9 +109,31 @@ class RealsenseWatchdog(Node):
             # If reset failed, back off a little so we don't spin.
             self._next_eligible_check = now + 5.0
 
+    def _find_device(self):
+        """Resolve the camera's sysfs path by USB identity, fresh each time
+        (the path changes across re-enumerations)."""
+        for vid_file in glob.glob('/sys/bus/usb/devices/*/idVendor'):
+            dev = os.path.dirname(vid_file)
+            try:
+                with open(vid_file) as f:
+                    vid = f.read().strip()
+                with open(os.path.join(dev, 'idProduct')) as f:
+                    pid = f.read().strip()
+            except OSError:
+                continue
+            if vid == self.usb_vendor and pid == self.usb_product:
+                return dev
+        return None
+
     def _usb_reset(self) -> bool:
-        """Write 0 then 1 to <usb_path>/authorized via sudo."""
-        auth = os.path.join(self.usb_path, 'authorized')
+        """Write 0 then 1 to <device>/authorized via sudo."""
+        dev = self._find_device()
+        if dev is None:
+            self.get_logger().error(
+                f"no USB device {self.usb_vendor}:{self.usb_product} found "
+                "to reset — camera absent from the bus?")
+            return False
+        auth = os.path.join(dev, 'authorized')
         try:
             for value in ('0', '1'):
                 # Sudoers must allow mw to run `tee <auth>` without password.
@@ -118,7 +149,7 @@ class RealsenseWatchdog(Node):
                         f"rc={proc.returncode} err={proc.stderr.decode().strip()}")
                     return False
                 time.sleep(0.5)
-            self.get_logger().info(f"USB reset of {self.usb_path} complete.")
+            self.get_logger().info(f"USB reset of {dev} complete.")
             return True
         except subprocess.TimeoutExpired:
             self.get_logger().error("USB reset command timed out.")

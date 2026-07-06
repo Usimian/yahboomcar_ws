@@ -192,7 +192,20 @@ class yahboomcar_driver(Node):
 				self.get_logger().error(
 					"IMU bias calibration failed and no stored value exists — "
 					"publishing uncorrected gyro (bias 0.0).")
-		
+
+		# Continuous recalibration: the MEMS bias wanders far beyond the
+		# boot snapshot (measured +0.0004 -> +0.0045 rad/s over one warm-up
+		# hour, 2026-07-05 — 16 deg/min of heading drift). Re-measure at
+		# rest, passively, from the samples pub_data already reads. Any
+		# drive command or measured wheel motion discards the window in
+		# progress; the last good bias stays in effect until a full quiet
+		# window passes the same gates as the boot calibration.
+		self.recal_interval_s = 120.0   # earliest next update after a good one
+		self.recal_window_size = 30     # 3 s of samples at the 10 Hz pub rate
+		self.recal_window = []
+		self.last_recal_time = time.time()
+		self.commanded_moving = False
+
  		# Hardware speed feedback system (better than raw encoders)
 		# The robot firmware provides processed velocity feedback that accounts for
 		# wheel dynamics, slip compensation, and motor characteristics
@@ -212,6 +225,14 @@ class yahboomcar_driver(Node):
 		vy = msg.linear.y * self.linear_y_factor
 		angular = msg.angular.z * self.angular_z_factor
 		self.car.set_car_motion(vx, vy, angular)
+
+		# Any nonzero drive command aborts an in-progress bias window.
+		# (Zero commands don't: idle teleop streams zeros continuously,
+		# and blocking on those would prevent recalibration forever.)
+		self.commanded_moving = (abs(vx) > 1e-3 or abs(vy) > 1e-3
+		                         or abs(angular) > 1e-3)
+		if self.commanded_moving:
+			self.recal_window.clear()
 		
 		# FIXED: Store commanded velocities for velocity feedback
 		self.last_cmd_vx = vx
@@ -321,7 +342,32 @@ class yahboomcar_driver(Node):
 			imu.linear_acceleration.z = az
 			imu.angular_velocity.x = gx
 			imu.angular_velocity.y = gy
-			# Apply the startup bias calibration (same correction the wheel
+
+			# Passive bias recalibration (see __init__ note)
+			if (self.commanded_moving
+					or abs(hardware_vx) > 0.01 or abs(hardware_vy) > 0.01):
+				self.recal_window.clear()
+			elif time.time() - self.last_recal_time >= self.recal_interval_s:
+				self.recal_window.append(gz)
+				if len(self.recal_window) >= self.recal_window_size:
+					mean = sum(self.recal_window) / len(self.recal_window)
+					spread = (sum((s - mean) ** 2 for s in self.recal_window)
+					          / len(self.recal_window)) ** 0.5
+					if spread < 0.005 and abs(mean) < 0.05:
+						if abs(mean - self.imu_angular_bias) > 0.002:
+							self.get_logger().info(
+								f"IMU z-gyro bias updated "
+								f"{self.imu_angular_bias:+.5f} -> {mean:+.5f} rad/s")
+						self.imu_angular_bias = mean
+						self.last_recal_time = time.time()
+						try:
+							with open(self.imu_bias_file, 'w') as f:
+								f.write(f"{mean:.6f}\n")
+						except OSError:
+							pass
+					self.recal_window.clear()
+
+			# Apply the bias calibration (same correction the wheel
 			# velocity path already uses) so consumers get a drift-free rate.
 			imu.angular_velocity.z = gz - self.imu_angular_bias
 

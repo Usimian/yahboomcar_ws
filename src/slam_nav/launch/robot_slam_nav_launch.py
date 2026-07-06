@@ -33,11 +33,12 @@ def generate_launch_description():
     # Prepend the RSUSB-backend librealsense (built from source) so the
     # realsense node loads it instead of the apt V4L2 build. The JetPack
     # kernel has no hid-sensor support (CONFIG_HID_SENSOR_HUB unset), so the
-    # V4L2 backend cannot read the D435i IMU; the RSUSB build reads it over
-    # libusb. Harmless no-op if the prefix dir does not exist.
-    rsusb_ld_envvar = SetEnvironmentVariable(
+    # Prefer the hand-built kernel-native librealsense in /usr/local: the
+    # RSUSB build stalls (uvc endpoint watchdogs, mute starts — 2026-07-05).
+    # Sourcing ROS puts the apt copy on LD_LIBRARY_PATH, so this must win.
+    realsense_ld_envvar = SetEnvironmentVariable(
         "LD_LIBRARY_PATH",
-        "/opt/librealsense_rsusb/lib:" + os.environ.get("LD_LIBRARY_PATH", ""))
+        "/usr/local/lib:" + os.environ.get("LD_LIBRARY_PATH", ""))
 
     declare_log_level_cmd = DeclareLaunchArgument(
         "log_level",
@@ -202,7 +203,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        rsusb_ld_envvar,
+        realsense_ld_envvar,
         stdout_linebuf_envvar,
         log_format_envvar,
         declare_log_level_cmd,

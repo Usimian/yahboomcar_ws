@@ -52,6 +52,19 @@ net.core.wmem_default=8388608
 ```
 `sudo sysctl --system` to apply. (Without this, high-rate sensor topics drop under CycloneDDS.)
 
+## CycloneDDS config — `/home/mw/cyclonedds_unicast.xml`
+
+Every ROS process on the robot needs `CYCLONEDDS_URI=file:///home/mw/cyclonedds_unicast.xml`
+(set in `~/.bashrc` and in the systemd launch scripts). Unicast peering (no multicast on
+the WiFi mesh) + `MaxMessageSize 1400B` so datagrams stay under the WiFi MTU — IP
+fragments get black-holed on the mesh (observed 2026-07-05), which silently kills every
+multi-fragment topic (`/scan`, point clouds) while single-packet topics keep flowing.
+DDS-level fragmentation retransmits per piece, so capping below the MTU is immune.
+
+The live file is `/home/mw/cyclonedds_unicast.xml`; the committed copy lives at the
+workspace root (`cyclonedds_unicast.xml`). Reapply: `cp cyclonedds_unicast.xml /home/mw/`.
+**Edit the repo copy first, then install it** — don't let the two drift.
+
 ## WiFi (must be 5 GHz + powersave off, or 100–400 ms RTT spikes look like Nav2 faults)
 ```
 # disable power save on the WiFi connection (name = "nicou")
@@ -64,10 +77,11 @@ echo 'options cfg80211 ieee80211_regdom=US' | sudo tee /etc/modprobe.d/cfg80211.
 ## sudoers — RealSense watchdog re-authorize
 `/etc/sudoers.d/realsense-watchdog`:
 ```
-mw ALL=(root) NOPASSWD: /usr/bin/tee /sys/bus/usb/devices/2-1.3/authorized
+mw ALL=(root) NOPASSWD: /usr/bin/tee /sys/bus/usb/devices/*/authorized
 ```
-(`2-1.3` is the D435i's USB path. The `realsense_watchdog` node lives in the `slam_nav`
-package — committed — and re-authorizes the camera if it drops.)
+(Wildcard, not a fixed path: the D435i's bus position moves after replugs/reboots —
+it was `2-1.3`, is `2-1.1` as of 2026-07-05 — and the `realsense_watchdog` node in the
+`slam_nav` package now finds it by vendor/product ID at reset time.)
 
 ---
 
@@ -99,7 +113,7 @@ Benchmark (Orin Nano @25W): YOLO12m @640 = 11 FPS fp32 / 22 FPS fp16.
 ---
 
 ## Fresh-robot reapply checklist
-1. chrony.conf + disable timesyncd; sysctl drop-in (`sysctl --system`)
+1. chrony.conf + disable timesyncd; sysctl drop-in (`sysctl --system`); `cp cyclonedds_unicast.xml /home/mw/`
 2. WiFi: powersave off + regdom US; join the 5 GHz SSID
 3. sudoers realsense-watchdog drop-in
 4. `colcon build` the workspace; `enable --now` the three services
