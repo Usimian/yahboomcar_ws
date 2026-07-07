@@ -124,9 +124,17 @@ def generate_launch_description():
             "input_topic": "/realsense_camera/depth/color/points",
             "output_topic": "/camera/depth/points_filtered",
             "target_frame": "base_footprint",
-            "min_height": 0.02,
-            "max_height": 0.25,
-            "filter_nans": True,
+            # Traversability classifier (anchored floor + range-aware step, full FOV).
+            # Replaced the old min_height/max_height band, which flooded the costmap
+            # on a sloping/carpet floor. Live-tuning knobs: base_step_threshold (main)
+            # and noise_alpha (far-range tolerance).
+            "range_min": 0.35,
+            "range_max": 2.5,
+            "floor_seed_z": 0.05,
+            "base_step_threshold": 0.03,
+            "noise_alpha": 0.010,
+            "grid_resolution": 0.05,
+            "min_cell_points": 3,
             "voxel_leaf_size": 0.03,
         }],
         arguments=["--ros-args", "--log-level", log_level]
